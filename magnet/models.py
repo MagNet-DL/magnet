@@ -6,7 +6,6 @@ from .nodes import Node
 
 class Sequential(nn.Sequential):
     def __init__(self, *layers, input_shape):
-        layers = list(layers)
         for layer in layers:
             if isinstance(layer, Node):
                 layer.build(input_shape)

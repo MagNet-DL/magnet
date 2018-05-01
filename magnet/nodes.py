@@ -15,7 +15,7 @@ class Node(nn.Module):
     @property
     def _default_params(self):
         pass
-        
+
     def _parse_params(self):
         args = caller_locals()
         
@@ -39,10 +39,6 @@ class Node(nn.Module):
         with torch.no_grad(): return tuple(self(torch.randn(in_shape)).size())
 
 class Conv(Node):
-    def __init__(self, *args, **kwargs):
-        self._parse_params()
-        super().__init__()
-        
     def build(self, in_shape):
         shape_dict = [nn.Conv1d, nn.Conv2d, nn.Conv3d]
         ndim = len(in_shape) - 2
