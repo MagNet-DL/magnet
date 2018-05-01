@@ -125,12 +125,19 @@ class Linear(MonoNode):
     def __init__(self, o, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
+    def forward(self, x):
+        if self._args['flat']: x = x.view(x.size(0), -1)
+
+        return super().forward(x)
+
     def _find_layer(self, in_shape):
         return nn.Linear
 
     def _get_kwargs(self, in_shape):
         kwargs = super()._get_kwargs(in_shape)
-        kwargs['in_features'] = in_shape[-1]
+
+        from numpy import prod
+        kwargs['in_features'] = prod(in_shape[1:]) if self._args['flat'] else in_shape[-1]
         return kwargs
 
     @property
@@ -139,7 +146,7 @@ class Linear(MonoNode):
 
     @property
     def _default_params(self):
-        p = {'b': True, 'act': 'relu'}
+        p = {'b': True, 'act': 'relu', 'flat': True}
         p.update(super()._default_params)
         return p
 
