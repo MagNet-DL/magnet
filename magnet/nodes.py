@@ -4,7 +4,41 @@ from torch import nn
 
 from ._utils import caller_locals
 
-class Conv(nn.Module):
+class Node(nn.Module):
+    def __init__(self, *args, **kwargs):
+        self._parse_params()
+        super().__init__()
+
+    def build(self, in_shape):
+        pass
+
+    @property
+    def _default_params(self):
+        pass
+        
+    def _parse_params(self):
+        args = caller_locals()
+        
+        default_param_list = list(self._default_params.items())
+
+        for i, arg_val in enumerate(args['args']):
+            param_name = default_param_list[i][0]
+            args[param_name] = arg_val
+        args.pop('args')
+        
+        for param_name, default in default_param_list:
+            if param_name in args['kwargs'].keys():
+                args[param_name] = args['kwargs'][param_name]
+            elif param_name not in args.keys():
+                args[param_name] = default
+        args.pop('kwargs')
+        
+        self._args = args
+
+    def get_output_shape(self, in_shape):
+        with torch.no_grad(): return tuple(self(torch.randn(in_shape)).size())
+
+class Conv(Node):
     def __init__(self, *args, **kwargs):
         self._parse_params()
         super().__init__()
@@ -41,28 +75,6 @@ class Conv(nn.Module):
         if self._args['c'] is None: 
             self._args['c'] = self._args['s'] * in_shape[1]
         
-    def _parse_params(self):
-        args = caller_locals()
-        
-        default_param_list = list(self._default_params.items())
-
-        for i, arg_val in enumerate(args['args']):
-            param_name = default_param_list[i][0]
-            args[param_name] = arg_val
-        args.pop('args')
-        
-        for param_name, default in default_param_list:
-            if param_name in args['kwargs'].keys():
-                args[param_name] = args['kwargs'][param_name]
-            elif param_name not in args.keys():
-                args[param_name] = default
-        args.pop('kwargs')
-        
-        self._args = args
-        
     @property
     def _default_params(self):
         return {'c': None, 'k': 3, 'p': 'half', 's': 1, 'd': 1, 'g': 1, 'b': True}
-
-    def get_output_shape(self, in_shape):
-        with torch.no_grad(): return tuple(self(torch.randn(in_shape)).size())
