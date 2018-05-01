@@ -14,7 +14,7 @@ class Node(nn.Module):
 
     @property
     def _default_params(self):
-        pass
+        return {}
 
     def _parse_params(self):
         args = caller_locals()
@@ -81,11 +81,9 @@ class Linear(Node):
         self._args['o'] = o
 
     def build(self, in_shape):
-        from numpy import prod
-
         kw_map = {'o': 'out_features', 'b': 'bias'}
         kwargs = {kw_map[k]: v for k, v in self._args.items()}
-        kwargs['in_features'] = prod(in_shape[1:])
+        kwargs['in_features'] = in_shape[-1]
         self.fc = nn.Linear(**kwargs)
 
     def forward(self, x):
@@ -94,3 +92,11 @@ class Linear(Node):
     @property
     def _default_params(self):
         return {'b': True}
+
+class Lambda(Node):
+    def __init__(self, fn):
+        super().__init__()
+        self.fn = fn
+
+    def forward(self, x):
+        return self.fn(x)
