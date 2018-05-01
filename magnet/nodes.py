@@ -1,3 +1,5 @@
+import torch
+
 from torch import nn
 
 from ._utils import caller_locals
@@ -61,3 +63,6 @@ class Conv(nn.Module):
     @property
     def _default_params(self):
         return {'c': None, 'k': 3, 'p': 'half', 's': 1, 'd': 1, 'g': 1, 'b': True}
+
+    def get_output_shape(self, in_shape):
+        with torch.no_grad(): return tuple(self(torch.randn(in_shape)).size())
