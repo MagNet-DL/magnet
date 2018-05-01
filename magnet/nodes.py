@@ -17,7 +17,9 @@ class Node(nn.Module):
         return {}
 
     def _parse_params(self):
-        args = caller_locals()
+        args = caller_locals(ancestor=True)
+        for k in ('args', 'kwargs'):
+            if k not in args.keys(): args[k] = []
         
         default_param_list = list(self._default_params.items())
 
@@ -92,7 +94,6 @@ class Linear(Node):
     def __init__(self, o, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self._set_activation()
-        self._args['o'] = o
 
     def build(self, in_shape):
         kw_map = {'out_features': 'o', 'bias': 'b'}
