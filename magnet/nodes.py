@@ -32,13 +32,18 @@ class Node(nn.Module):
             elif param_name not in args.keys():
                 args[param_name] = default
         args.pop('kwargs')
-        
+
         self._args = args
+
 
     def get_output_shape(self, in_shape):
         with torch.no_grad(): return tuple(self(torch.randn(in_shape)).size())
 
 class Conv(Node):
+    def __init__(self, *args, **kwargs):
+        super().__init__()
+        self._set_activation()
+
     def build(self, in_shape):
         shape_dict = [nn.Conv1d, nn.Conv2d, nn.Conv3d]
         ndim = len(in_shape) - 2
@@ -46,14 +51,14 @@ class Conv(Node):
         
         self._set_padding(in_shape)
         
-        kw_map = {'k': 'kernel_size', 'c': 'out_channels','s': 'stride',
-                 'p': 'padding', 'd': 'dilation', 'g': 'groups', 'b': 'bias'}
-        kwargs = {kw_map[k]: v for k, v in self._args.items()}
+        kw_map = {'kernel_size': 'k', 'out_channels': 'c','stride': 's',
+                 'padding': 'p', 'dilation': 'd', 'groups': 'g', 'bias': 'b'}
+        kwargs = {k: self._args[v] for k, v in kw_map.items()}
         kwargs['in_channels'] = in_shape[1]
         self.conv = module(**kwargs)
         
     def forward(self, x):
-        return self.conv(x)
+        return self._activation(self.conv(x))
     
     def _set_padding(self, in_shape):
         p = self._args['p']
@@ -73,25 +78,42 @@ class Conv(Node):
         
     @property
     def _default_params(self):
-        return {'c': None, 'k': 3, 'p': 'half', 's': 1, 'd': 1, 'g': 1, 'b': True}
+        return {'c': None, 'k': 3, 'p': 'half', 's': 1, 'd': 1, 'g': 1, 'b': True, 'act': 'relu'}
+
+    def _set_activation(self):
+        from torch.nn import functional as F
+        from functools import partial
+
+        activation_dict = {'relu': F.relu, 'sigmoid': F.sigmoid, 'tanh': F.tanh,
+                            'lrelu': partial(F.leaky_relu, leak=0.2), None: lambda x: x}
+        self._activation = activation_dict[self._args['act']]
 
 class Linear(Node):
     def __init__(self, o, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        self._set_activation()
         self._args['o'] = o
 
     def build(self, in_shape):
-        kw_map = {'o': 'out_features', 'b': 'bias'}
-        kwargs = {kw_map[k]: v for k, v in self._args.items()}
+        kw_map = {'out_features': 'o', 'bias': 'b'}
+        kwargs = {k: self._args[v] for k, v in kw_map.items()}
         kwargs['in_features'] = in_shape[-1]
         self.fc = nn.Linear(**kwargs)
 
     def forward(self, x):
-        return self.fc(x)
+        return self._activation(self.fc(x))
 
     @property
     def _default_params(self):
-        return {'b': True}
+        return {'b': True, 'act': 'relu'}
+
+    def _set_activation(self):
+        from torch.nn import functional as F
+        from functools import partial
+
+        activation_dict = {'relu': F.relu, 'sigmoid': F.sigmoid, 'tanh': F.tanh,
+                            'lrelu': partial(F.leaky_relu, leak=0.2), None: lambda x: x}
+        self._activation = activation_dict[self._args['act']]
 
 class Lambda(Node):
     def __init__(self, fn):

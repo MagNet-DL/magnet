@@ -7,7 +7,9 @@ class Sequential(nn.Sequential):
 
         layers = list(layers)
         for i, layer in enumerate(layers):
-            if isfunction(layer): layers[i] = Lambda(layer)
+            if isfunction(layer): 
+                layers[i] = Lambda(layer)
+                layer = layers[i]
 
             if isinstance(layer, Node):
                 layer.build(input_shape)
