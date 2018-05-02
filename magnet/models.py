@@ -20,7 +20,7 @@ class Sequential(nn.Sequential):
 
         super().__init__(*nodes)
 
-    def summary(self, show_parameters='trainable', show_args=False):
+    def summary(self, show_parameters='trainable', show_args=False, max_width=120):
         from beautifultable import BeautifulTable
         from ._utils import num_params
 
@@ -39,7 +39,7 @@ class Sequential(nn.Sequential):
             print('Total' + str_dict[show_parameters] + 'Parameters:', _get_num_params(self))
 
 
-        table = BeautifulTable()
+        table = BeautifulTable(max_width=max_width)
         column_headers = ['Node', 'Shape']
         if show_parameters is not False: column_headers.append(_handle_parameter_output('col'))
 
