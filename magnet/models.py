@@ -20,14 +20,34 @@ class Sequential(nn.Sequential):
 
         super().__init__(*layers)
 
-    def summary(self):
+    def summary(self, show_parameters='trainable'):
         from beautifultable import BeautifulTable
+        from ._utils import num_params
+
         table = BeautifulTable()
-        table.column_headers = ['Layer', 'Shape']
+        column_headers = ['Layer', 'Shape']
+        if show_parameters == 'trainable': column_headers.append('Trainable Parameters')
+        elif show_parameters == 'non-trainable': column_headers.append('NON-Trainable Parameters')
+        elif show_parameters == 'all': column_headers.append('Parameters')
+        elif show_parameters: column_headers.append('Parameters (Trainable, NON-Trainable)')
+        table.column_headers = column_headers
         
-        table.append_row(['input', self._shape_sequence[0]])
+        row = ['input', self._shape_sequence[0]]
+        if show_parameters == 'trainable' or show_parameters == 'non-trainable' or show_parameters == 'all': row.append(0)
+        elif show_parameters: row.append((0, 0))
+        table.append_row(row)
         for layer, shape in zip(self.children(), self._shape_sequence[1:]):
             name = str(layer).split('(')[0]
-            table.append_row([name, shape])
+            row = [name, shape]
+            if show_parameters == 'trainable': row.append(num_params(layer)[0])
+            elif show_parameters == 'non-trainable': row.append(num_params(layer)[1])
+            elif show_parameters == 'all': row.append(sum(num_params(layer)))
+            elif show_parameters: row.append(num_params(layer))
+            table.append_row(row)
             
         print(table)
+
+        if show_parameters == 'trainable': print('Total Trainable Parameters:', num_params(self)[0])
+        elif show_parameters == 'non-trainable': print('Total NON-Trainable Parameters:', num_params(self)[1])
+        elif show_parameters == 'all': print('Total Parameters:', sum(num_params(self)))
+        elif show_parameters: print('Total Parameters (Trainable, NON-Trainable):', num_params(layer))

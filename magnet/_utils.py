@@ -19,3 +19,16 @@ def caller_locals(ancestor=False):
         l.pop('__class__', None)
         return l
     finally: del frame
+
+def num_params(module):
+    from numpy import prod
+
+    trainable, non_trainable = 0, 0
+    for p in module.parameters():
+        n = prod(p.size())
+        if p.requires_grad:
+            trainable += n
+        else:
+            non_trainable += n
+
+    return trainable, non_trainable
