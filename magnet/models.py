@@ -54,8 +54,15 @@ class Sequential(nn.Sequential):
 
         if arguments: row.append('')
         table.append_row(row)
+
+        name_dict = {}
         for node, shape in zip(self.children(), shape_sequence[1:]):
             name = str(node).split('(')[0]
+            if name in name_dict.keys():
+                name_dict[name] += 1
+                name = name + str(name_dict[name])
+            else: name_dict[name] = 1
+
             row = [name, shape]
             if parameters is not False: row.append(_handle_parameter_output('row', node))
 
