@@ -11,6 +11,7 @@ class Sequential(nn.Sequential):
 
         self._shape_sequence = [input_shape]
         nodes = list(nodes)
+        name_dict = {}
         for i, node in enumerate(nodes):
             if type(node) in [list, tuple]:
                 nodes[i] = Sequential(*node, input_shape=input_shape)
@@ -22,6 +23,10 @@ class Sequential(nn.Sequential):
 
             if isinstance(node, Node):
                 node.build(input_shape)
+                if node.name in name_dict.keys():
+                    name_dict[node.name] += 1
+                    node.name = node.name + str(name_dict[node.name])
+                else: name_dict[node.name] = 1
 
             input_shape = get_output_shape(node, input_shape)
             self._shape_sequence.append(input_shape)
@@ -67,13 +72,8 @@ class Sequential(nn.Sequential):
         if arguments: row.append('')
         table.append_row(row)
 
-        name_dict = {}
         for node, shape in zip(self.children(), shape_sequence[1:]):
             name = node.name
-            if name in name_dict.keys():
-                name_dict[name] += 1
-                name = name + str(name_dict[name])
-            else: name_dict[name] = 1
 
             row = [name, shape]
             if parameters is not False: row.append(_handle_parameter_output('row', node))
