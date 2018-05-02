@@ -5,13 +5,19 @@ from torch import nn
 from ._utils import get_output_shape
 
 class Sequential(nn.Sequential):
-    def __init__(self, *nodes, input_shape):
+    def __init__(self, *nodes, **kwargs):
         from .nodes import Node
 
-        if hasattr(input_shape, 'shape'): input_shape = tuple(input_shape.shape)
-        
-        self._shape_sequence = [input_shape]
         nodes = list(nodes)
+
+        if type(nodes[-1]) in [list, tuple] and all(type(i) is int for i in nodes[-1]) or hasattr(nodes[-1], 'shape'):
+            input_shape = nodes.pop()
+        elif 'x' in kwargs.keys(): input_shape = kwargs.pop('x')
+        else: raise RuntimeError('Need to provide an input shape or tensor, x')
+
+        if hasattr(input_shape, 'shape'): input_shape = tuple(input_shape.shape)
+
+        self._shape_sequence = [input_shape]
         name_dict = {}
         for i, node in enumerate(nodes):
             node = nodes[i] = self._to_node(node, input_shape)
