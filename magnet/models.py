@@ -69,7 +69,7 @@ class Sequential(nn.Sequential):
 
         name_dict = {}
         for node, shape in zip(self.children(), shape_sequence[1:]):
-            name = str(node).split('(')[0]
+            name = node.name
             if name in name_dict.keys():
                 name_dict[name] += 1
                 name = name + str(name_dict[name])

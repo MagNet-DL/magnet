@@ -18,8 +18,16 @@ class Node(nn.Module):
 
     def _parse_params(self):
         args = caller_locals(ancestor=True)
-        if 'args' not in args.keys(): args['args'] = []
+        if 'args' not in args.keys(): args['args'] = ()
+        args['args'] = list(args['args'])
         if 'kwargs' not in args.keys(): args['kwargs'] = {}
+
+        if len(args['args']) > 0 and type(args['args'][0]) is str:
+            self.name = args['args'].pop(0)
+        elif 'name' in args['kwargs'].keys():
+            self.name = args['kwargs'].pop('name')
+        else:
+            self.name = self.__class__.__name__
         
         default_param_list = list(self._default_params.items())
 
