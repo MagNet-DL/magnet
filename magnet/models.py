@@ -24,36 +24,41 @@ class Sequential(nn.Sequential):
         from beautifultable import BeautifulTable
         from ._utils import num_params
 
+        def _handle_parameter_output(mode, node=None):
+            str_dict = {'trainable': 'Trainable', 'non-trainable': 'NON-Trainable', 'all': '', True: '(Trainable, NON-Trainable)'}
+            if mode == 'col': return str_dict[show_parameters] + ' Parameters'
+
+            def _get_num_params(module):
+                n = num_params(module) if module is not None else (0, 0)
+                n_dict = {'trainable': n[0], 'non-trainable': n[1], 'all': sum(n), True: n}
+                n = n_dict[show_parameters]
+                return ', '.join(['{:,}'] * len(n)).format(*n) if type(n) is tuple else '{:,}'.format(n)
+            
+            if mode == 'row': return _get_num_params(node)
+
+            print('Total' + str_dict[show_parameters] + 'Parameters:', _get_num_params(self))
+
+
         table = BeautifulTable()
         column_headers = ['Node', 'Shape']
-        if show_parameters == 'trainable': column_headers.append('Trainable Parameters')
-        elif show_parameters == 'non-trainable': column_headers.append('NON-Trainable Parameters')
-        elif show_parameters == 'all': column_headers.append('Parameters')
-        elif show_parameters: column_headers.append('Parameters (Trainable, NON-Trainable)')
+        if show_parameters is not False: column_headers.append(_handle_parameter_output('col'))
 
         if show_args: column_headers.append('Arguments')
         table.column_headers = column_headers
         
         row = ['input', self._shape_sequence[0]]
-        if show_parameters == 'trainable' or show_parameters == 'non-trainable' or show_parameters == 'all': row.append(0)
-        elif show_parameters: row.append((0, 0))
+        if show_parameters is not False: row.append(_handle_parameter_output('row'))
 
         if show_args: row.append('')
         table.append_row(row)
         for node, shape in zip(self.children(), self._shape_sequence[1:]):
             name = str(node).split('(')[0]
             row = [name, shape]
-            if show_parameters == 'trainable': row.append('{:,}'.format(num_params(node)[0]))
-            elif show_parameters == 'non-trainable': row.append('{:,}'.format(num_params(node)[1]))
-            elif show_parameters == 'all': row.append('{:,}'.format(sum(num_params(node))))
-            elif show_parameters: row.append('{:,}, {:,}'.format(*num_params(node)))
+            if show_parameters is not False: row.append(_handle_parameter_output('row', node))
 
             if show_args: row.append(node.get_args())
             table.append_row(row)
             
         print(table)
 
-        if show_parameters == 'trainable': print('Total Trainable Parameters:', '{:,}'.format(num_params(self)[0]))
-        elif show_parameters == 'non-trainable': print('Total NON-Trainable Parameters:', '{:,}'.format(num_params(self)[1]))
-        elif show_parameters == 'all': print('Total Parameters:', '{:,}'.format(sum(num_params(self))))
-        elif show_parameters: print('Total Parameters (Trainable, NON-Trainable):', '{:,}, {:,}'.format(*num_params(node)))
+        if show_parameters is not False: _handle_parameter_output('total')
