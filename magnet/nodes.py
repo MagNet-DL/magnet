@@ -46,9 +46,15 @@ class Node(nn.Module):
     def  _mul_int(self, n):
         return [self] + [self.__class__(**self._args) for _ in range(n - 1)]
 
+    def  _mul_list(self, n):
+        pass
+
     def __mul__(self, n):
         if type(n) is int or (type(n) is float and n.is_integer()):
             return self._mul_int(n)
+
+        if type(n) is tuple or type(n) is list:
+            return self._mul_list(n)
 
 class MonoNode(Node):
     def __init__(self, *args, **kwargs):
@@ -130,6 +136,16 @@ class Conv(MonoNode):
         p.update(super()._default_params)
         return p
 
+    def  _mul_list(self, n):
+        convs = [self]
+        self._args['c'] = n[0]
+        kwargs = self._args.copy()
+        for c in n[1:]:
+            kwargs['c'] = c
+            convs.append(self.__class__(**kwargs))
+
+        return convs
+
 class Linear(MonoNode):
     def __init__(self, o, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -158,6 +174,16 @@ class Linear(MonoNode):
         p = {'b': True, 'act': 'relu', 'flat': True}
         p.update(super()._default_params)
         return p
+
+    def  _mul_list(self, n):
+        lins = [self]
+        self._args['o'] = n[0]
+        kwargs = self._args.copy()
+        for o in n[1:]:
+            kwargs['o'] = o
+            lins.append(self.__class__(**kwargs))
+
+        return lins
 
 class Lambda(Node):
     def __init__(self, fn):
