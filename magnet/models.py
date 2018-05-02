@@ -5,6 +5,7 @@ class Sequential(nn.Sequential):
         from .nodes import Node, Lambda
         from inspect import isfunction
 
+        self._shape_sequence = [input_shape]
         layers = list(layers)
         for i, layer in enumerate(layers):
             if isfunction(layer): 
@@ -15,4 +16,18 @@ class Sequential(nn.Sequential):
                 layer.build(input_shape)
                 input_shape = layer.get_output_shape(input_shape)
 
+            self._shape_sequence.append(input_shape)
+
         super().__init__(*layers)
+
+    def summary(self):
+        from beautifultable import BeautifulTable
+        table = BeautifulTable()
+        table.column_headers = ['Layer', 'Shape']
+        
+        table.append_row(['input', self._shape_sequence[0]])
+        for layer, shape in zip(self.children(), self._shape_sequence[1:]):
+            name = str(layer).split('(')[0]
+            table.append_row([name, shape])
+            
+        print(table)
