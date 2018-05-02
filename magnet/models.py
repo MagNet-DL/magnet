@@ -6,25 +6,15 @@ from ._utils import get_output_shape
 
 class Sequential(nn.Sequential):
     def __init__(self, *nodes, input_shape):
-        from .nodes import Node, Lambda
-        from inspect import isfunction
+        from .nodes import Node
 
         self._shape_sequence = [input_shape]
         nodes = list(nodes)
         name_dict = {}
         for i, node in enumerate(nodes):
-            if type(node) in [list, tuple]:
-                nodes[i] = Sequential(*node, input_shape=input_shape)
-                node = nodes[i]
+            node = nodes[i] = self._to_node(node, input_shape)
+            if isinstance(node, Node): node.build(input_shape)
 
-            if isfunction(node): 
-                nodes[i] = Lambda(node)
-                node = nodes[i]
-
-            if isinstance(node, Node):
-                node.build(input_shape)
-
-            if not hasattr(node, 'name'): node.name = node.__class__.__name__
             if node.name in name_dict.keys():
                 name_dict[node.name] += 1
                 node.name = node.name + str(name_dict[node.name])
@@ -86,3 +76,23 @@ class Sequential(nn.Sequential):
         print(table)
 
         if parameters is not False: _handle_parameter_output('total')
+
+    def _to_node(self, x, input_shape=None):
+        from .nodes import Lambda
+        from inspect import isfunction
+
+        if type(x) is dict:
+            name = list(x.keys())[0]
+
+            node = self._to_node(x[name], input_shape)
+            node.name = name
+
+        elif type(x) in [list, tuple]: node = Sequential(*x, input_shape=input_shape)
+
+        elif isfunction(x): node = Lambda(x)
+
+        else: node = x
+
+        if not hasattr(node, 'name'): node.name = node.__class__.__name__
+        
+        return node
