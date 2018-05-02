@@ -20,45 +20,45 @@ class Sequential(nn.Sequential):
 
         super().__init__(*nodes)
 
-    def summary(self, show_parameters='trainable', show_args=False, max_width=120):
+    def summary(self, parameters='trainable', arguments=False, max_width=120):
         from beautifultable import BeautifulTable
         from ._utils import num_params
 
         def _handle_parameter_output(mode, node=None):
             str_dict = {'trainable': 'Trainable', 'non-trainable': 'NON-Trainable', 'all': '', True: '(Trainable, NON-Trainable)'}
-            if mode == 'col': return str_dict[show_parameters] + ' Parameters'
+            if mode == 'col': return str_dict[parameters] + ' Parameters'
 
             def _get_num_params(module):
                 n = num_params(module) if module is not None else (0, 0)
                 n_dict = {'trainable': n[0], 'non-trainable': n[1], 'all': sum(n), True: n}
-                n = n_dict[show_parameters]
+                n = n_dict[parameters]
                 return ', '.join(['{:,}'] * len(n)).format(*n) if type(n) is tuple else '{:,}'.format(n)
             
             if mode == 'row': return _get_num_params(node)
 
-            print('Total' + str_dict[show_parameters] + 'Parameters:', _get_num_params(self))
+            print('Total' + str_dict[parameters] + 'Parameters:', _get_num_params(self))
 
 
         table = BeautifulTable(max_width=max_width)
         column_headers = ['Node', 'Shape']
-        if show_parameters is not False: column_headers.append(_handle_parameter_output('col'))
+        if parameters is not False: column_headers.append(_handle_parameter_output('col'))
 
-        if show_args: column_headers.append('Arguments')
+        if arguments: column_headers.append('Arguments')
         table.column_headers = column_headers
         
         row = ['input', self._shape_sequence[0]]
-        if show_parameters is not False: row.append(_handle_parameter_output('row'))
+        if parameters is not False: row.append(_handle_parameter_output('row'))
 
-        if show_args: row.append('')
+        if arguments: row.append('')
         table.append_row(row)
         for node, shape in zip(self.children(), self._shape_sequence[1:]):
             name = str(node).split('(')[0]
             row = [name, shape]
-            if show_parameters is not False: row.append(_handle_parameter_output('row', node))
+            if parameters is not False: row.append(_handle_parameter_output('row', node))
 
-            if show_args: row.append(node.get_args())
+            if arguments: row.append(node.get_args())
             table.append_row(row)
             
         print(table)
 
-        if show_parameters is not False: _handle_parameter_output('total')
+        if parameters is not False: _handle_parameter_output('total')
