@@ -32,6 +32,7 @@ class Sequential(nn.Sequential):
     def summary(self, parameters='trainable', arguments=False, batch=False, max_width=120):
         from beautifultable import BeautifulTable
         from ._utils import num_params
+        from .nodes import Node
 
         def _handle_parameter_output(mode, node=None):
             str_dict = {'trainable': 'Trainable', 'non-trainable': 'NON-Trainable', 'all': '', True: '(Trainable, NON-Trainable)'}
@@ -70,7 +71,9 @@ class Sequential(nn.Sequential):
             row = [name, shape]
             if parameters is not False: row.append(_handle_parameter_output('row', node))
 
-            if arguments: row.append(node.get_args())
+            if arguments: 
+                if isinstance(node, Node):row.append(node.get_args())
+                else: row.append('')
             table.append_row(row)
             
         print(table)
@@ -86,11 +89,8 @@ class Sequential(nn.Sequential):
 
             node = self._to_node(x[name], input_shape)
             node.name = name
-
         elif type(x) in [list, tuple]: node = Sequential(*x, input_shape=input_shape)
-
         elif isfunction(x): node = Lambda(x)
-
         else: node = x
 
         if not hasattr(node, 'name'): node.name = node.__class__.__name__
