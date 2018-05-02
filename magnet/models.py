@@ -23,10 +23,12 @@ class Sequential(nn.Sequential):
 
             if isinstance(node, Node):
                 node.build(input_shape)
-                if node.name in name_dict.keys():
-                    name_dict[node.name] += 1
-                    node.name = node.name + str(name_dict[node.name])
-                else: name_dict[node.name] = 1
+
+            if not hasattr(node, 'name'): node.name = node.__class__.__name__
+            if node.name in name_dict.keys():
+                name_dict[node.name] += 1
+                node.name = node.name + str(name_dict[node.name])
+            else: name_dict[node.name] = 1
 
             input_shape = get_output_shape(node, input_shape)
             self._shape_sequence.append(input_shape)
