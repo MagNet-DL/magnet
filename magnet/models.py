@@ -38,6 +38,8 @@ class Sequential(nn.Sequential):
 
             print('Total' + str_dict[parameters] + 'Parameters:', _get_num_params(self))
 
+        shape_sequence = [', '.join(str(i) for i in s) for s in self._shape_sequence]
+
 
         table = BeautifulTable(max_width=max_width)
         column_headers = ['Node', 'Shape']
@@ -46,12 +48,12 @@ class Sequential(nn.Sequential):
         if arguments: column_headers.append('Arguments')
         table.column_headers = column_headers
         
-        row = ['input', self._shape_sequence[0]]
+        row = ['input', shape_sequence[0]]
         if parameters is not False: row.append(_handle_parameter_output('row'))
 
         if arguments: row.append('')
         table.append_row(row)
-        for node, shape in zip(self.children(), self._shape_sequence[1:]):
+        for node, shape in zip(self.children(), shape_sequence[1:]):
             name = str(node).split('(')[0]
             row = [name, shape]
             if parameters is not False: row.append(_handle_parameter_output('row', node))
