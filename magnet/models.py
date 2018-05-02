@@ -20,7 +20,7 @@ class Sequential(nn.Sequential):
 
         super().__init__(*nodes)
 
-    def summary(self, parameters='trainable', arguments=False, max_width=120):
+    def summary(self, parameters='trainable', arguments=False, batch=False, max_width=120):
         from beautifultable import BeautifulTable
         from ._utils import num_params
 
@@ -38,7 +38,8 @@ class Sequential(nn.Sequential):
 
             print('Total' + str_dict[parameters] + 'Parameters:', _get_num_params(self))
 
-        shape_sequence = [', '.join(str(i) for i in s) for s in self._shape_sequence]
+        _start_idx = 0 if batch else 1
+        shape_sequence = [', '.join(str(i) for i in s[_start_idx:]) for s in self._shape_sequence]
 
 
         table = BeautifulTable(max_width=max_width)
