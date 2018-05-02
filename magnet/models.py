@@ -20,7 +20,7 @@ class Sequential(nn.Sequential):
 
         super().__init__(*layers)
 
-    def summary(self, show_parameters='trainable'):
+    def summary(self, show_parameters='trainable', show_args=False):
         from beautifultable import BeautifulTable
         from ._utils import num_params
 
@@ -30,11 +30,15 @@ class Sequential(nn.Sequential):
         elif show_parameters == 'non-trainable': column_headers.append('NON-Trainable Parameters')
         elif show_parameters == 'all': column_headers.append('Parameters')
         elif show_parameters: column_headers.append('Parameters (Trainable, NON-Trainable)')
+
+        if show_args: column_headers.append('Arguments')
         table.column_headers = column_headers
         
         row = ['input', self._shape_sequence[0]]
         if show_parameters == 'trainable' or show_parameters == 'non-trainable' or show_parameters == 'all': row.append(0)
         elif show_parameters: row.append((0, 0))
+
+        if show_args: row.append('')
         table.append_row(row)
         for layer, shape in zip(self.children(), self._shape_sequence[1:]):
             name = str(layer).split('(')[0]
@@ -43,6 +47,8 @@ class Sequential(nn.Sequential):
             elif show_parameters == 'non-trainable': row.append('{:,}'.format(num_params(layer)[1]))
             elif show_parameters == 'all': row.append('{:,}'.format(sum(num_params(layer))))
             elif show_parameters: row.append('{:,}, {:,}'.format(*num_params(layer)))
+
+            if show_args: row.append(layer.get_args())
             table.append_row(row)
             
         print(table)

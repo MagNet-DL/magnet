@@ -37,6 +37,8 @@ class Node(nn.Module):
 
         self._args = args
 
+    def get_args(self):
+        return ', '.join(str(k) + '=' + str(v) for k, v in self._args.items())
 
     def get_output_shape(self, in_shape):
         with torch.no_grad(): return tuple(self(torch.randn(in_shape)).size())
