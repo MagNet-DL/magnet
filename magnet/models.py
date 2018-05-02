@@ -2,6 +2,8 @@ import torch
 
 from torch import nn
 
+from ._utils import get_output_shape
+
 class Sequential(nn.Sequential):
     def __init__(self, *nodes, input_shape):
         from .nodes import Node, Lambda
@@ -10,14 +12,18 @@ class Sequential(nn.Sequential):
         self._shape_sequence = [input_shape]
         nodes = list(nodes)
         for i, node in enumerate(nodes):
+            if type(node) in [list, tuple]:
+                nodes[i] = Sequential(*node, input_shape=input_shape)
+                node = nodes[i]
+
             if isfunction(node): 
                 nodes[i] = Lambda(node)
                 node = nodes[i]
 
             if isinstance(node, Node):
                 node.build(input_shape)
-                input_shape = node.get_output_shape(input_shape)
 
+            input_shape = get_output_shape(node, input_shape)
             self._shape_sequence.append(input_shape)
 
         super().__init__(*nodes)

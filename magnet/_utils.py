@@ -32,3 +32,8 @@ def num_params(module):
             non_trainable += n
 
     return trainable, non_trainable
+
+def get_output_shape(module, input_shape):
+    from torch import no_grad, randn
+    
+    with no_grad(): return tuple(module(randn(input_shape)).size())
