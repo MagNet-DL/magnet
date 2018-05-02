@@ -1,3 +1,5 @@
+import torch
+
 from torch import nn
 
 class Sequential(nn.Sequential):
@@ -19,6 +21,10 @@ class Sequential(nn.Sequential):
             self._shape_sequence.append(input_shape)
 
         super().__init__(*nodes)
+
+    def forward(self, x=None):
+        if x is None: x = torch.randn(1, *self._shape_sequence[0][1:])
+        return super().forward(x)
 
     def summary(self, parameters='trainable', arguments=False, batch=False, max_width=120):
         from beautifultable import BeautifulTable
