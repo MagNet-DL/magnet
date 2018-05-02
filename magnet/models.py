@@ -39,15 +39,15 @@ class Sequential(nn.Sequential):
         for layer, shape in zip(self.children(), self._shape_sequence[1:]):
             name = str(layer).split('(')[0]
             row = [name, shape]
-            if show_parameters == 'trainable': row.append(num_params(layer)[0])
-            elif show_parameters == 'non-trainable': row.append(num_params(layer)[1])
-            elif show_parameters == 'all': row.append(sum(num_params(layer)))
-            elif show_parameters: row.append(num_params(layer))
+            if show_parameters == 'trainable': row.append('{:,}'.format(num_params(layer)[0]))
+            elif show_parameters == 'non-trainable': row.append('{:,}'.format(num_params(layer)[1]))
+            elif show_parameters == 'all': row.append('{:,}'.format(sum(num_params(layer))))
+            elif show_parameters: row.append('{:,}, {:,}'.format(*num_params(layer)))
             table.append_row(row)
             
         print(table)
 
-        if show_parameters == 'trainable': print('Total Trainable Parameters:', num_params(self)[0])
-        elif show_parameters == 'non-trainable': print('Total NON-Trainable Parameters:', num_params(self)[1])
-        elif show_parameters == 'all': print('Total Parameters:', sum(num_params(self)))
-        elif show_parameters: print('Total Parameters (Trainable, NON-Trainable):', num_params(layer))
+        if show_parameters == 'trainable': print('Total Trainable Parameters:', '{:,}'.format(num_params(self)[0]))
+        elif show_parameters == 'non-trainable': print('Total NON-Trainable Parameters:', '{:,}'.format(num_params(self)[1]))
+        elif show_parameters == 'all': print('Total Parameters:', '{:,}'.format(sum(num_params(self))))
+        elif show_parameters: print('Total Parameters (Trainable, NON-Trainable):', '{:,}, {:,}'.format(*num_params(layer)))
