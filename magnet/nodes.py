@@ -6,8 +6,11 @@ from ._utils import caller_locals
 
 class Node(nn.Module):
     def __init__(self, *args, **kwargs):
+        input_shape = kwargs.pop('input_shape', None)
         self._parse_params()
         super().__init__()
+
+        if input_shape is not None: self.build(input_shape)
 
     def build(self, in_shape):
         pass
@@ -66,7 +69,7 @@ class Node(nn.Module):
 
 class MonoNode(Node):
     def __init__(self, *args, **kwargs):
-        super().__init__()
+        super().__init__(*args, **kwargs)
         self._set_activation()
 
     def build(self, in_shape):
