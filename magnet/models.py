@@ -36,7 +36,7 @@ class Sequential(nn.Sequential):
             
             if mode == 'row': return _get_num_params(node)
 
-            print('Total' + str_dict[parameters] + 'Parameters:', _get_num_params(self))
+            print('Total ' + str_dict[parameters] + ' Parameters:', _get_num_params(self))
 
         _start_idx = 0 if batch else 1
         shape_sequence = [', '.join(str(i) for i in s[_start_idx:]) for s in self._shape_sequence]
