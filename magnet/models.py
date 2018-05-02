@@ -97,7 +97,7 @@ class Sequential(nn.Sequential):
 
             node = self._to_node(x[name], input_shape)
             node.name = name
-        elif type(x) in [list, tuple]: node = Sequential(*x, input_shape=input_shape)
+        elif type(x) in [list, tuple]: node = Sequential(*x, x=input_shape)
         elif isfunction(x): node = Lambda(x)
         else: node = x
 
