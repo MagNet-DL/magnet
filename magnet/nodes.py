@@ -43,6 +43,13 @@ class Node(nn.Module):
     def get_output_shape(self, in_shape):
         with torch.no_grad(): return tuple(self(torch.randn(in_shape)).size())
 
+    def  _mul_int(self, n):
+        return [self] + [self.__class__(**self._args) for _ in range(n - 1)]
+
+    def __mul__(self, n):
+        if type(n) is int or (type(n) is float and n.is_integer()):
+            return self._mul_int(n)
+
 class MonoNode(Node):
     def __init__(self, *args, **kwargs):
         super().__init__()
