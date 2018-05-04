@@ -16,6 +16,8 @@ class Sequential(nn.Sequential):
 
         if hasattr(input_shape, 'shape'): input_shape = tuple(input_shape.shape)
 
+        if len(nodes) == 1 and type(nodes[0]) in [list, tuple]: nodes = nodes[0]
+
         self._shape_sequence = [input_shape]
         name_dict = {}
         for i, node in enumerate(nodes):
