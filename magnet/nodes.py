@@ -1,6 +1,7 @@
 import torch
 
 from torch import nn
+from torch.nn import functional as F
 
 from ._utils import caller_locals
 
@@ -91,7 +92,6 @@ class MonoNode(Node):
         pass
 
     def _set_activation(self):
-        from torch.nn import functional as F
         from functools import partial
 
         activation_dict = {'relu': F.relu, 'sigmoid': F.sigmoid, 'tanh': F.tanh,
@@ -109,6 +109,10 @@ class Conv(MonoNode):
         self._set_padding(in_shape)
 
         super().build(in_shape)
+
+    def forward(self, x):
+        if hasattr(self, '_upsample'): x = F.upsample(x, scale_factor=self._upsample)
+        return super().forward(x)
 
     def _find_layer(self, in_shape):
         shape_dict = [nn.Conv1d, nn.Conv2d, nn.Conv3d]
@@ -129,6 +133,10 @@ class Conv(MonoNode):
         p = self._args['p']
         if p == 'half': f = 0.5
         elif p == 'same': f = 1
+        elif p == 'double':
+            self._upsample = 2
+            self._args['c'] = in_shape[1] // 2
+            f = 1
         else: return
         
         s = 1 / f
