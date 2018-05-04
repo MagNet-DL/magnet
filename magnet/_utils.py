@@ -37,3 +37,21 @@ def get_output_shape(module, input_shape):
     from torch import no_grad, randn
     
     with no_grad(): return tuple(module(randn(input_shape)).size())
+
+def to_node(x, input_shape=None):
+        from .nodes import Lambda
+        from .models import Sequential
+        from inspect import isfunction
+
+        if type(x) is dict:
+            name = list(x.keys())[0]
+
+            node = to_node(x[name], input_shape)
+            node.name = name
+        elif type(x) in [list, tuple]: node = Sequential(*x, x=input_shape)
+        elif isfunction(x): node = Lambda(x)
+        else: node = x
+
+        if not hasattr(node, 'name'): node.name = node.__class__.__name__
+        
+        return node

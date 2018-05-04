@@ -2,11 +2,10 @@ import torch
 
 from torch import nn
 
-from ._utils import get_output_shape
-
 class Sequential(nn.Sequential):
     def __init__(self, *nodes, **kwargs):
         from .nodes import Node
+        from ._utils import get_output_shape, to_node
 
         nodes = list(nodes)
 
@@ -20,7 +19,7 @@ class Sequential(nn.Sequential):
         self._shape_sequence = [input_shape]
         name_dict = {}
         for i, node in enumerate(nodes):
-            node = nodes[i] = self._to_node(node, input_shape)
+            node = nodes[i] = to_node(node, input_shape)
             if isinstance(node, Node): node.build(input_shape)
 
             if node.name in name_dict.keys():
@@ -87,20 +86,3 @@ class Sequential(nn.Sequential):
         print(table)
 
         if parameters is not False: _handle_parameter_output('total')
-
-    def _to_node(self, x, input_shape=None):
-        from .nodes import Lambda
-        from inspect import isfunction
-
-        if type(x) is dict:
-            name = list(x.keys())[0]
-
-            node = self._to_node(x[name], input_shape)
-            node.name = name
-        elif type(x) in [list, tuple]: node = Sequential(*x, x=input_shape)
-        elif isfunction(x): node = Lambda(x)
-        else: node = x
-
-        if not hasattr(node, 'name'): node.name = node.__class__.__name__
-        
-        return node
