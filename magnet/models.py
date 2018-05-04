@@ -86,3 +86,19 @@ class Sequential(nn.Sequential):
         print(table)
 
         if parameters is not False: _handle_parameter_output('total')
+
+class DNN(Sequential):
+    def __init__(self, *sizes, **kwargs):
+        from .nodes import Linear
+
+        i = [i for i, s in enumerate(sizes) if type(s) is int][-1] + 1
+        args = list(sizes[i:])
+        sizes = sizes[:i]
+
+        layers = Linear(**kwargs) * sizes[:-1]
+        kwargs.pop('act', None)
+        layers.append(Linear(sizes[-1], act=None, **kwargs))
+
+        args = layers + args
+
+        super().__init__(*args, **kwargs)

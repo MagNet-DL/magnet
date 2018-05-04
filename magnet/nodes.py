@@ -166,9 +166,6 @@ class Conv(MonoNode):
         return convs
 
 class Linear(MonoNode):
-    def __init__(self, o, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-
     def forward(self, x):
         if self._args['flat']: x = x.view(x.size(0), -1)
 
@@ -190,7 +187,7 @@ class Linear(MonoNode):
 
     @property
     def _default_params(self):
-        p = {'b': True, 'act': 'relu', 'flat': True}
+        p = {'o': None, 'b': True, 'act': 'relu', 'flat': True}
         p.update(super()._default_params)
         return p
 
