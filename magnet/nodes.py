@@ -206,5 +206,10 @@ class Lambda(Node):
         super().__init__()
         self.fn = fn
 
+        from inspect import getsource
+        get_lambda_name = lambda l: getsource(l).split('=')[0].strip()
+
+        self.name = get_lambda_name(fn)
+
     def forward(self, x):
         return self.fn(x)
