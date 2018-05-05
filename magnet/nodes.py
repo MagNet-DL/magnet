@@ -3,7 +3,7 @@ import torch
 from torch import nn
 from torch.nn import functional as F
 
-from ._utils import caller_locals
+from ._utils import caller_locals, get_function_name
 
 class Node(nn.Module):
     def __init__(self, *args, **kwargs):
@@ -206,10 +206,8 @@ class Lambda(Node):
         super().__init__()
         self.fn = fn
 
-        from inspect import getsource
-        get_lambda_name = lambda l: getsource(l).split('=')[0].strip()
-
-        self.name = 'Lambda' if fn.__name__ == '<lambda>' else get_lambda_name(fn)
+        self.name = get_function_name(fn)
+        if self.name is None: self.name = 'Lambda'
 
     def forward(self, x):
         return self.fn(x)

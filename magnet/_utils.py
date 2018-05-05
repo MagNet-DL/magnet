@@ -55,3 +55,9 @@ def to_node(x, input_shape=None):
         if not hasattr(node, 'name'): node.name = node.__class__.__name__
         
         return node
+
+def get_function_name(fn):
+    from inspect import getsource
+    name = getsource(fn).split('=')
+
+    return name[0].strip() if len(name) > 1 else None
