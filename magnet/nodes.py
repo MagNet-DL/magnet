@@ -209,7 +209,7 @@ class Lambda(Node):
         from inspect import getsource
         get_lambda_name = lambda l: getsource(l).split('=')[0].strip()
 
-        self.name = get_lambda_name(fn)
+        self.name = 'Lambda' if fn.__name__ == '<lambda>' else get_lambda_name(fn)
 
     def forward(self, x):
         return self.fn(x)
