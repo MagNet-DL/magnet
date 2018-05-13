@@ -1,3 +1,1 @@
-from .autograd import accelerate, eval
-
-accelerate()
+from .autograd import eval
