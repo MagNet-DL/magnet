@@ -2,9 +2,10 @@ import torch
 
 from torch import nn
 
-class Sequential(nn.Sequential):
+from .nodes import Node
+
+class Sequential(nn.Sequential, Node):
     def __init__(self, *nodes, **kwargs):
-        from .nodes import Node
         from ._utils import get_output_shape, to_node
 
         nodes = list(nodes)
