@@ -1,4 +1,5 @@
 import torch
+import magnet as mag
 
 from torch import nn
 from torch.nn import functional as F
@@ -14,7 +15,7 @@ class Node(nn.Module):
         if input_shape is not None: self.build(input_shape)
 
     def build(self, in_shape):
-        pass
+        self.to(mag.device)
 
     @property
     def _default_params(self):
@@ -77,6 +78,8 @@ class MonoNode(Node):
         self._layer_class = self._find_layer(in_shape)
         kwargs = self._get_kwargs(in_shape)
         self._layer = self._layer_class(**kwargs)
+        
+        super().build(in_shape)
 
     def forward(self, x):
         return self._activation(self._layer(x))
