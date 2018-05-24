@@ -23,7 +23,7 @@ class Sequential(nn.Sequential, Node):
         name_dict = {}
         for i, node in enumerate(nodes):
             node = nodes[i] = to_node(node, input_shape)
-            if isinstance(node, Node): node.build(input_shape)
+            if isinstance(node, Node): node.build(torch.randn(input_shape))
 
             if node.name in name_dict.keys():
                 name_dict[node.name] += 1

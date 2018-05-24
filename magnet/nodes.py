@@ -12,10 +12,14 @@ class Node(nn.Module):
         self._parse_params()
         super().__init__()
 
-        if input_shape is not None: self.build(input_shape)
+        self._built = False
 
-    def build(self, in_shape):
+    def build(self, *args, **kwargs):
         self.to(mag.device)
+        if mag.lock_build: self._built = True
+
+    def forward(self, *args, **kwargs):
+        if not (self._built and mag.lock_build): self.build(*args, **kwargs)
 
     @property
     def _default_params(self):
@@ -74,14 +78,17 @@ class MonoNode(Node):
         super().__init__(*args, **kwargs)
         self._set_activation()
 
-    def build(self, in_shape):
-        self._layer_class = self._find_layer(in_shape)
+    def build(self, x):
+        in_shape = x.shape
+
+        layer_class = self._find_layer(in_shape)
         kwargs = self._get_kwargs(in_shape)
-        self._layer = self._layer_class(**kwargs)
+        self._layer = layer_class(**kwargs)
         
         super().build(in_shape)
 
     def forward(self, x):
+        super().forward(x)
         return self._activation(self._layer(x))
 
     def _find_layer(self, in_shape):
@@ -108,10 +115,10 @@ class MonoNode(Node):
         return p
 
 class Conv(MonoNode):
-    def build(self, in_shape):
+    def build(self, x):
+        in_shape = x.shape
         self._set_padding(in_shape)
-
-        super().build(in_shape)
+        super().build(x)
 
     def forward(self, x):
         if hasattr(self, '_upsample'): x = F.upsample(x, scale_factor=self._upsample)
@@ -213,4 +220,5 @@ class Lambda(Node):
         if self.name is None: self.name = 'Lambda'
 
     def forward(self, x):
+        super().forward(x)
         return self.fn(x)
