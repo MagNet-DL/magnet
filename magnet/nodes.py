@@ -16,10 +16,24 @@ class Node(nn.Module):
 
     def build(self, *args, **kwargs):
         self.to(mag.device)
-        if mag.lock_build: self._built = True
+        self._built = True
 
     def forward(self, *args, **kwargs):
-        if not (self._built and mag.lock_build): self.build(*args, **kwargs)
+        if not (self._built and mag.build_lock): self.build(*args, **kwargs)
+
+    def parameters(self):
+        import warnings
+        if not self._built: raise RuntimeError(f'Node {self.name} not built yet')
+        if not mag.build_lock: warnings.warn('Build-lock disabled. The node may be re-built', RuntimeWarning)
+
+        return super().parameters()
+
+    def named_parameters(self):
+        import warnings
+        if not self._built: raise RuntimeError(f'Node {self.name} not built yet')
+        if not mag.build_lock: warnings.warn('Build-lock disabled. The node may be re-built', RuntimeWarning)
+
+        return super().named_parameters()
 
     @property
     def _default_params(self):

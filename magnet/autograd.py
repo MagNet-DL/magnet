@@ -4,7 +4,7 @@ from contextlib import contextmanager
 
 device = 'cuda' if torch.cuda.is_available() else 'cpu'
 
-lock_build = True
+build_lock = True
 
 @contextmanager
 def eval(*modules):
