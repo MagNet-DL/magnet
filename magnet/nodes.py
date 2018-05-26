@@ -21,19 +21,18 @@ class Node(nn.Module):
     def forward(self, *args, **kwargs):
         if not (self._built and mag.build_lock): self.build(*args, **kwargs)
 
-    def parameters(self):
+    def _check_parameters(self, return_val):
         import warnings
         if not self._built: raise RuntimeError(f'Node {self.name} not built yet')
         if not mag.build_lock: warnings.warn('Build-lock disabled. The node may be re-built', RuntimeWarning)
 
-        return super().parameters()
+        return return_val
+
+    def parameters(self):
+        return self._check_parameters(super().parameters())
 
     def named_parameters(self):
-        import warnings
-        if not self._built: raise RuntimeError(f'Node {self.name} not built yet')
-        if not mag.build_lock: warnings.warn('Build-lock disabled. The node may be re-built', RuntimeWarning)
-
-        return super().named_parameters()
+        return self._check_parameters(super().named_parameters())
 
     @property
     def _default_params(self):
