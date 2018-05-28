@@ -33,7 +33,7 @@ class Node(nn.Module):
     def parameters(self):
         return self._check_parameters(super().parameters())
 
-    def named_parameters(self):
+    def named_parameters(self, memo=None, prefix=''):
         return self._check_parameters(super().named_parameters())
 
     @property
