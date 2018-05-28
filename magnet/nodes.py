@@ -52,7 +52,7 @@ class Node(nn.Module):
             self.name = args['kwargs'].pop('name')
         else:
             self.name = self.__class__.__name__
-    
+
         for name, val in zip(self._args_order, args['args']): args[name] = val
         args.pop('args')
         
@@ -215,13 +215,19 @@ class Linear(MonoNode):
         return lins
 
 class Lambda(Node):
-    def __init__(self, fn):
-        super().__init__()
-        self.fn = fn
+    configuration = {'fn': None}
 
-        self.name = get_function_name(fn)
-        if self.name is None: self.name = 'Lambda'
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        if self.name is None:
+            self.name = get_function_name(self.configuration['fn'])
+            if self.name is None: self.name = 'Lambda'
 
     def forward(self, x):
         super().forward(x)
-        return self.fn(x)
+        return self.configuration['fn'](x)
+
+    @property
+    def _args_order(self):
+        return ['fn']
