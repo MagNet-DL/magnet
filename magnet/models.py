@@ -34,6 +34,7 @@ class Sequential(nn.Sequential, Node):
             self._shape_sequence.append(input_shape)
 
         super().__init__(*nodes)
+        super().build()
 
     def forward(self, x=None):
         if x is None: x = torch.randn(1, *self._shape_sequence[0][1:])
