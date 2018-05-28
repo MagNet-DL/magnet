@@ -58,6 +58,10 @@ def to_node(x, input_shape=None):
 
 def get_function_name(fn):
     from inspect import getsource
-    name = getsource(fn).split('=')
+    src = getsource(fn)
 
-    return name[0].strip() if len(name) > 1 else None
+    name = src.split('=')
+    if len(name) > 1: return name[0].strip()
+
+    name = src.split('def ')
+    if len(name) > 1: return name[1].split('(')[0].strip()

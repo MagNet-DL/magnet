@@ -220,7 +220,7 @@ class Lambda(Node):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-        if self.name is None:
+        if self.name == self.__class__.__name__:
             self.name = get_function_name(self.configuration['fn'])
             if self.name is None: self.name = 'Lambda'
 
