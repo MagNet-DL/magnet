@@ -10,7 +10,7 @@ def eval(*modules):
     
     from inspect import isfunction
     if not isfunction(modules[0]) or len(modules) > 1:
-        return _eval_content_manager(*modules)
+        return _eval_context_manager(*modules)
     
     from functools import wraps
 
