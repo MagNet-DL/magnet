@@ -4,11 +4,31 @@ from contextlib import contextmanager
 
 device = 'cuda' if torch.cuda.is_available() else 'cpu'
 
-@contextmanager
 def eval(*modules):
     """A Context Manager that makes it easy to run statements in eval mode.
     It sets ```modules``` in eval() mode and ensures that gradients are not computed"""
+    
+    from inspect import isfunction
+    if not isfunction(modules[0]) or len(modules) > 1:
+        return _eval_content_manager(*modules)
+    
+    from functools import wraps
 
+    fn = modules[0]
+    @wraps(fn)
+    def new_fn(*args, **kwargs):
+        from torch.nn import Module
+        
+        arg_list = list(args) + list(kwargs.values())
+        modules = [a for a in arg_list if type(a) is Module]
+        
+        with _eval_context_manager(*modules): 
+            return fn(*args, **kwargs)
+            
+    return new_fn
+
+@contextmanager
+def _eval_context_manager(*modules):
     states = []
     for module in modules:
         states.append(module.training)
