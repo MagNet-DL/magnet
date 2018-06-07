@@ -36,4 +36,4 @@ def _eval_context_manager(*modules):
         
     with torch.no_grad(): yield
 
-    for module, state in zip(modules, states): module.training = state
+    for module, state in zip(modules, states): module.train(state)
