@@ -37,25 +37,34 @@ class Data:
 	def __call__(self, mode='train'):
 		raise NotImplementedError()
 
-class MNIST(Data):
-	def __init__(self, path=None, val_split=None):
-		super().__init__(path)
+	def __getitem__(self, index):
+		if isinstance(index, int): return self[index, 'train']
+		elif isinstance(index, str):
+			try: return self._dataset[index]
+			except KeyError as err:
+				if index == 'val': err_msg = "This dataset has no validation set held out! If the constructor has a val_split attribute, consider setting that."
+				elif index == 'test': err_msg = 'This dataset has no test set.'
+				else: err_msg = "The only keys are 'train', 'val', and 'test'."
+				raise KeyError(err_msg) from err
 
-		from torchvision.datasets import mnist
+		mode = index[1]
+		index = index[0]
+		return self[mode][index]
 
-		self._dataset = {mode: mnist.MNIST(self._path, train=(mode == 'train'), download=True)
-						for mode in ('train', 'test')}
+	def __setitem__(self, mode, dataset):
+		self._dataset[mode] = dataset
 
-		if val_split is not None: self._split_val(val_split)
+	def __len__(self):
+		return len(self['train'])
 
 	def _split_val(self, val_split):
 		if isinstance(val_split, int):
 			len_val = val_split
-			dataset_len = len(self._dataset['train'])
+			dataset_len = len(self)
 			val_ids = list(range(dataset_len - len_val, dataset_len))
 			return self._split_val(val_ids)
 		elif isinstance(val_split, float) and val_split >= 0 and val_split < 1:
-			num_val = int(val_split * len(self._dataset['train']))
+			num_val = int(val_split * len(self))
 			return self._split_val(num_val)
 
 		from torch.utils.data.dataset import Subset
@@ -65,11 +74,19 @@ class MNIST(Data):
 			raise ValueError("The indices in val_split should be unique. If you're not super"
 							 "pushy, pass in a fraction to split the dataset.")
 
-		total_ids = set(range(len(self._dataset['train'])))
+		total_ids = set(range(len(self['train'])))
 		train_ids = list(total_ids - val_ids)
 
-		self._dataset['val'] = Subset(self._dataset['train'], val_split)
-		self._dataset['train'] = Subset(self._dataset['train'], train_ids)
+		self['val'] = Subset(self['train'], val_split)
+		self['train'] = Subset(self['train'], train_ids)
 
-	def __call__(self, mode='train'):
-		return self._dataset[mode]
+class MNIST(Data):
+	def __init__(self, val_split=None, path=None):
+		super().__init__(path)
+
+		from torchvision.datasets import mnist
+
+		self._dataset = {mode: mnist.MNIST(self._path, train=(mode == 'train'), download=True)
+						for mode in ('train', 'test')}
+
+		if val_split is not None: self._split_val(val_split)
