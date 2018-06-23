@@ -1,3 +1,6 @@
+from torch.utils.data.dataloader import DataLoader
+from torch.utils.data import Dataset
+
 def _get_data_dir():
 	import os
 	from pathlib import Path
@@ -10,6 +13,41 @@ def _get_data_dir():
 	return Path(DIR_DATA)
 
 DIR_DATA = _get_data_dir()
+
+class TransformedDataset(Dataset):
+	def __init__(self, dataset, transforms):
+		self.dataset = dataset
+		self.transforms = transforms
+
+	def __getitem__(self, index):
+		x = list(self.dataset[index])
+		return self._apply_transforms(x)
+
+	def __len__(self):
+		return len(self.dataset)
+
+	def __add__(self, other):
+		return ConcatDataset([self.dataset, other])
+
+	def _apply_transforms(self, x):
+		transforms = self.transforms
+		if transforms is None: return x
+
+		if not isinstance(transforms, (tuple, list)): transforms = [transforms]
+
+		if len(transforms) > len(x): raise ValueError('The third index should be a a single transform for the first datapoint or a'
+															'tuple with each transform applied to the respective datapoint.')
+
+		for i, transform in enumerate(transforms):
+			if not isinstance(transform, (tuple, list)):
+				x[i] = transform(x[i])
+				continue
+
+			x_i = x[i]
+			for t in transform: x_i = t(x_i)
+			x[i] = x_i
+
+		return x
 
 class Data:
 	def __init__(self, path=None):
@@ -24,6 +62,8 @@ class Data:
 		self._download()
 		self._preprocess()
 
+		self._transforms = None
+
 	def _is_downloaded(self):
 		return True
 
@@ -34,21 +74,19 @@ class Data:
 	def _preprocess(self):
 		pass
 
-	def __call__(self, mode='train'):
-		raise NotImplementedError()
-
-	def __getitem__(self, index):
-		if isinstance(index, int): return self[index, 'train']
-		elif isinstance(index, str):
-			try: return self._dataset[index]
+	def __getitem__(self, args):
+		if isinstance(args, int): return self['train'][args]
+		elif isinstance(args, str):
+			try: return self._dataset[args]
 			except KeyError as err:
-				if index == 'val': err_msg = "This dataset has no validation set held out! If the constructor has a val_split attribute, consider setting that."
-				elif index == 'test': err_msg = 'This dataset has no test set.'
+				if args == 'val': err_msg = "This dataset has no validation set held out! If the constructor has a val_split attribute, consider setting that."
+				elif args == 'test': err_msg = 'This dataset has no test set.'
 				else: err_msg = "The only keys are 'train', 'val', and 'test'."
 				raise KeyError(err_msg) from err
 
-		mode = index[1]
-		index = index[0]
+		mode = args[1]
+		index = args[0]
+
 		return self[mode][index]
 
 	def __setitem__(self, mode, dataset):
@@ -80,13 +118,21 @@ class Data:
 		self['val'] = Subset(self['train'], val_split)
 		self['train'] = Subset(self['train'], train_ids)
 
+	def __call__(self, batch_size=1, shuffle=False, transforms=None, num_workers=0, mode='train'):
+		if transforms is None: transforms = self._transforms
+		
+		return DataLoader(TransformedDataset(self._dataset[mode], transforms), batch_size, shuffle, num_workers=num_workers)
+
 class MNIST(Data):
 	def __init__(self, val_split=None, path=None):
-		super().__init__(path)
-
 		from torchvision.datasets import mnist
+		from torchvision.transforms import ToTensor
+
+		super().__init__(path)
 
 		self._dataset = {mode: mnist.MNIST(self._path, train=(mode == 'train'), download=True)
 						for mode in ('train', 'test')}
 
 		if val_split is not None: self._split_val(val_split)
+
+		self._transforms = ToTensor()
