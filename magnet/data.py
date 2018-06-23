@@ -27,17 +27,14 @@ class TransformedDataset(Dataset):
 	def __len__(self):
 		return len(self.dataset)
 
-	def __add__(self, other):
-		return ConcatDataset([self.dataset, other])
-
 	def _apply_transforms(self, x):
 		transforms = self.transforms
 		if transforms is None: return x
 
 		if not isinstance(transforms, (tuple, list)): transforms = [transforms]
 
-		if len(transforms) > len(x): raise ValueError('The third index should be a a single transform for the first datapoint or a'
-															'tuple with each transform applied to the respective datapoint.')
+		if len(transforms) > len(x): raise ValueError('Provide a single transform for the first datapoint or a'
+														'tuple with each transform applied to the respective datapoint.')
 
 		for i, transform in enumerate(transforms):
 			if not isinstance(transform, (tuple, list)):
@@ -161,7 +158,7 @@ class Data:
 							collate_fn, pin_memory, drop_last, timeout, worker_init_fn)
 
 class MNIST(Data):
-	def __init__(self, val_split=None, path=None):
+	def __init__(self, val_split=0.2, path=None):
 		from torchvision.datasets import mnist
 		from torchvision.transforms import ToTensor
 
@@ -173,3 +170,11 @@ class MNIST(Data):
 		if val_split is not None: self._split_val(val_split)
 
 		self._transforms = ToTensor()
+
+_data_wiki = {'mnist': MNIST}
+
+def get_data(name):
+	try:
+		return _data_wiki[name.lower()]()
+	except KeyError as err:
+		raise KeyError('No such dataset.') from err
