@@ -1,5 +1,6 @@
-from torch.utils.data.dataloader import DataLoader
+from torch.utils.data.dataloader import DataLoader, default_collate
 from torch.utils.data import Dataset
+from torch.utils.data.sampler import Sampler
 
 def _get_data_dir():
 	import os
@@ -48,6 +49,35 @@ class TransformedDataset(Dataset):
 			x[i] = x_i
 
 		return x
+
+class OmniSampler(Sampler):
+	def __init__(self, shuffle=False, replace=False, probabilities=None):
+		self.shuffle = shuffle
+		self.replace = replace
+		self.probabilities = probabilities
+		
+		self.pos = -1
+	
+	def bind(self, dataset):
+		self.dataset = dataset
+		
+		self.indices = list(range(len(self)))
+		
+		if self.shuffle: 
+			self.indices = np.random.choice(self.indices, len(self),
+											self.replace, self.probabilities)
+			
+	def __next__(self):
+		self.pos += 1
+		if self.pos >= len(self): raise StopIteration()
+			
+		return self.indices[self.pos]
+		
+	def __iter__(self):
+		return self
+
+	def __len__(self):
+		return len(self.dataset)
 
 class Data:
 	def __init__(self, path=None):
@@ -118,10 +148,17 @@ class Data:
 		self['val'] = Subset(self['train'], val_split)
 		self['train'] = Subset(self['train'], train_ids)
 
-	def __call__(self, batch_size=1, shuffle=False, transforms=None, num_workers=0, mode='train'):
+	def __call__(self, batch_size=1, shuffle=False, replace=False, probabilities=None, sampler=None, batch_sampler=None, num_workers=0,
+				collate_fn=default_collate, pin_memory=False, drop_last=False, timeout=0, worker_init_fn=None, transforms=None, mode='train'):
 		if transforms is None: transforms = self._transforms
-		
-		return DataLoader(TransformedDataset(self._dataset[mode], transforms), batch_size, shuffle, num_workers=num_workers)
+
+		dataset = TransformedDataset(self._dataset[mode], transforms)
+		if sampler is None: 
+			sampler = OmniSampler(shuffle, replace, probabilities)
+			sampler.bind(dataset)
+
+		return DataLoader(dataset, batch_size, shuffle, sampler, batch_sampler, num_workers,
+							collate_fn, pin_memory, drop_last, timeout, worker_init_fn)
 
 class MNIST(Data):
 	def __init__(self, val_split=None, path=None):
