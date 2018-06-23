@@ -1,3 +1,5 @@
+import numpy as np
+
 from torch.utils.data.dataloader import DataLoader, default_collate
 from torch.utils.data import Dataset
 from torch.utils.data.sampler import Sampler
@@ -154,7 +156,7 @@ class Data:
 			sampler = OmniSampler(shuffle, replace, probabilities)
 			sampler.bind(dataset)
 
-		return DataLoader(dataset, batch_size, shuffle, sampler, batch_sampler, num_workers,
+		return DataLoader(dataset, batch_size, False, sampler, batch_sampler, num_workers,
 							collate_fn, pin_memory, drop_last, timeout, worker_init_fn)
 
 class MNIST(Data):
