@@ -17,8 +17,8 @@ class Node(nn.Module):
         self._built = False
 
     def build(self, *args, **kwargs):
-        self.to(mag.device)
         self._built = True
+        self.to(mag.device)
 
     def forward(self, *args, **kwargs):
         if not (self._built and mag.build_lock): self.build(*args, **kwargs)
@@ -86,8 +86,7 @@ class Node(nn.Module):
 
     def to(self, *args, **kwargs):
         super().to(*args, **kwargs)
-        try: self.device = next(self.parameters())[0].device
-        except: pass
+        self.device = next(self.parameters())[0].device
         return self
 
 class MonoNode(Node):
