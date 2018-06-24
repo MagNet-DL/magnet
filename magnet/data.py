@@ -1,6 +1,7 @@
 import numpy as np
 
-from torch.utils.data.dataloader import DataLoader, default_collate
+from torch.utils.data.dataloader import DataLoader as DataLoaderPyTorch
+from torch.utils.data.dataloader import default_collate
 from torch.utils.data import Dataset
 from torch.utils.data.sampler import Sampler
 
@@ -18,7 +19,7 @@ def _get_data_dir():
 DIR_DATA = _get_data_dir()
 
 class TransformedDataset(Dataset):
-	def __init__(self, dataset, transforms):
+	def __init__(self, dataset, transforms=None):
 		self.dataset = dataset
 		self.transforms = transforms
 
@@ -50,25 +51,25 @@ class TransformedDataset(Dataset):
 		return x
 
 class OmniSampler(Sampler):
-	def __init__(self, shuffle=False, replace=False, probabilities=None):
+	def __init__(self, dataset, shuffle=False, replace=False, probabilities=None):
+		self.dataset = dataset
 		self.shuffle = shuffle
 		self.replace = replace
 		self.probabilities = probabilities
-		
-		self.pos = -1
-	
-	def bind(self, dataset):
-		self.dataset = dataset
-		
+
+		self._begin()
+
+	def _begin(self):
 		self.indices = list(range(len(self)))
 		
 		if self.shuffle: 
 			self.indices = np.random.choice(self.indices, len(self),
 											self.replace, self.probabilities)
-			
+		self.pos = -1
+
 	def __next__(self):
 		self.pos += 1
-		if self.pos >= len(self): raise StopIteration()
+		if self.pos >= len(self): self._begin()
 			
 		return self.indices[self.pos]
 		
@@ -77,6 +78,17 @@ class OmniSampler(Sampler):
 
 	def __len__(self):
 		return len(self.dataset)
+
+class DataLoader(DataLoaderPyTorch):
+	def state_dict(self):
+		sampler = self.sampler
+		if sampler.shuffle and sampler.replace: return None
+
+		return {'indices': sampler.indices, 'pos': sampler.pos}
+
+	def load_state_dict(self, state_dict):
+		self.sampler.indices = state_dict['indices']
+		self.sampler.pos = state_dict['pos']
 
 class Data:
 	def __init__(self, path=None):
@@ -147,16 +159,16 @@ class Data:
 		self['val'] = Subset(self['train'], val_split)
 		self['train'] = Subset(self['train'], train_ids)
 
-	def __call__(self, batch_size=1, shuffle=False, replace=False, probabilities=None, sampler=None, batch_sampler=None, num_workers=0,
-				collate_fn=default_collate, pin_memory=False, drop_last=False, timeout=0, worker_init_fn=None, transforms=None, mode='train'):
+	def __call__(self, batch_size=1, shuffle=False, replace=False, probabilities=None, num_workers=0, collate_fn=default_collate,
+				pin_memory=False, drop_last=False, timeout=0, worker_init_fn=None, transforms=None, mode='train'):
 		if transforms is None: transforms = self._transforms
 
-		dataset = TransformedDataset(self._dataset[mode], transforms)
-		if sampler is None: 
-			sampler = OmniSampler(shuffle, replace, probabilities)
-			sampler.bind(dataset)
-
-		return DataLoader(dataset, batch_size, False, sampler, batch_sampler, num_workers,
+		dataset = TransformedDataset(self._dataset[mode], transforms) 
+		sampler = OmniSampler(dataset, shuffle, replace, probabilities)
+		shuffle = False
+		batch_sampler = None
+		
+		return DataLoader(dataset, batch_size, shuffle, sampler, batch_sampler, num_workers,
 							collate_fn, pin_memory, drop_last, timeout, worker_init_fn)
 
 class MNIST(Data):
