@@ -84,6 +84,12 @@ class Node(nn.Module):
         if type(n) is tuple or type(n) is list:
             return self._mul_list(n)
 
+    def to(self, *args, **kwargs):
+        super().to(*args, **kwargs)
+        try: self.device = next(self.parameters())[0].device
+        except: pass
+        return self
+
 class MonoNode(Node):
     configuration = {'act': 'relu'}
 
