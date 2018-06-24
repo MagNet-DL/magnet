@@ -51,25 +51,33 @@ class TransformedDataset(Dataset):
 		return x
 
 class OmniSampler(Sampler):
-	def __init__(self, dataset, shuffle=False, replace=False, probabilities=None):
+	def __init__(self, dataset, shuffle=False, replace=False, probabilities=None, sample_space=None):
 		self.dataset = dataset
 		self.shuffle = shuffle
 		self.replace = replace
 		self.probabilities = probabilities
+		self.sample_space = sample_space
 
-		self._begin()
+		self._begin(-1)
 
-	def _begin(self):
-		self.indices = list(range(len(self)))
+	def _begin(self, pos):
+		if self.sample_space is None:
+			self.indices = list(range(len(self)))
+		elif isinstance(self.sample_space, (list, tuple)):
+			self.indices = self.sample_space
+		elif isinstance(self.sample_space, int):
+			self.indices = list(range(self.sample_space))
+		elif isinstance(self.sample_space, float):
+			self.indices = list(range(int(self.sample_space * len(self))))
 		
 		if self.shuffle: 
 			self.indices = np.random.choice(self.indices, len(self),
 											self.replace, self.probabilities)
-		self.pos = -1
+		self.pos = pos
 
 	def __next__(self):
 		self.pos += 1
-		if self.pos >= len(self): self._begin()
+		if self.pos >= len(self.indices): self._begin(0)
 			
 		return self.indices[self.pos]
 		
@@ -160,14 +168,14 @@ class Data:
 		self['train'] = Subset(self['train'], train_ids)
 
 	def __call__(self, batch_size=1, shuffle=False, replace=False, probabilities=None, num_workers=0, collate_fn=default_collate,
-				pin_memory=False, drop_last=False, timeout=0, worker_init_fn=None, transforms=None, mode='train'):
+				pin_memory=False, drop_last=False, timeout=0, worker_init_fn=None, transforms=None, sample_space=None, mode='train'):
 		if transforms is None: transforms = self._transforms
 
 		dataset = TransformedDataset(self._dataset[mode], transforms) 
-		sampler = OmniSampler(dataset, shuffle, replace, probabilities)
+		sampler = OmniSampler(dataset, shuffle, replace, probabilities, sample_space)
 		shuffle = False
 		batch_sampler = None
-		
+
 		return DataLoader(dataset, batch_size, shuffle, sampler, batch_sampler, num_workers,
 							collate_fn, pin_memory, drop_last, timeout, worker_init_fn)
 
