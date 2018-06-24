@@ -3,6 +3,7 @@ import torch
 from contextlib import contextmanager
 
 device = 'cuda' if torch.cuda.is_available() else 'cpu'
+device = torch.device(device)
 
 build_lock = True
 

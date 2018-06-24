@@ -89,6 +89,12 @@ class Node(nn.Module):
         self.device = next(self.parameters())[0].device
         return self
 
+    def load_state_dict(self, f):
+        device = mag.device.type
+        if device == 'cuda': device = 'cuda:0'
+        
+        super().load_state_dict(torch.load(f, map_location=device))
+
 class MonoNode(Node):
     configuration = {'act': 'relu'}
 
