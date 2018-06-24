@@ -4,6 +4,7 @@ from torch.utils.data.dataloader import DataLoader as DataLoaderPyTorch
 from torch.utils.data.dataloader import default_collate
 from torch.utils.data import Dataset
 from torch.utils.data.sampler import Sampler
+from torchvision import transforms
 
 def _get_data_dir():
 	import os
@@ -103,15 +104,20 @@ class Data:
 		if not hasattr(self, '_name'): self._name = self.__class__.__name__
 
 		if path is None: path = DIR_DATA
-
 		self._path = path / self._name
-
 		self._path.mkdir(parents=True, exist_ok=True)
+		self.set_defaults()
 
 		self._download()
 		self._preprocess()
 
-		self._transforms = None
+	def set_defaults(self, num_workers=0, collate_fn=default_collate, pin_memory=False, timeout=0, worker_init_fn=None, transforms=transforms.ToTensor()):
+		self._num_workers = num_workers
+		self._collate_fn = collate_fn
+		self._pin_memory = pin_memory
+		self._timeout = timeout
+		self._worker_init_fn = worker_init_fn
+		self._transforms = transforms
 
 	def _is_downloaded(self):
 		return True
@@ -167,14 +173,18 @@ class Data:
 		self['val'] = Subset(self['train'], val_split)
 		self['train'] = Subset(self['train'], train_ids)
 
-	def __call__(self, batch_size=1, shuffle=False, replace=False, probabilities=None, num_workers=0, collate_fn=default_collate,
-				pin_memory=False, drop_last=False, timeout=0, worker_init_fn=None, transforms=None, sample_space=None, mode='train'):
-		if transforms is None: transforms = self._transforms
-
-		dataset = TransformedDataset(self._dataset[mode], transforms) 
+	def __call__(self, batch_size=1, shuffle=False, replace=False, probabilities=None, sample_space=None, mode='train'):
+		dataset = TransformedDataset(self._dataset[mode], self._transforms) 
 		sampler = OmniSampler(dataset, shuffle, replace, probabilities, sample_space)
 		shuffle = False
 		batch_sampler = None
+		drop_last = False
+
+		num_workers = self._num_workers
+		collate_fn = self._collate_fn
+		pin_memory = self._pin_memory
+		timeout = self._timeout
+		worker_init_fn = self._worker_init_fn
 
 		return DataLoader(dataset, batch_size, shuffle, sampler, batch_sampler, num_workers,
 							collate_fn, pin_memory, drop_last, timeout, worker_init_fn)
@@ -182,7 +192,6 @@ class Data:
 class MNIST(Data):
 	def __init__(self, val_split=0.2, path=None):
 		from torchvision.datasets import mnist
-		from torchvision.transforms import ToTensor
 
 		super().__init__(path)
 
@@ -190,8 +199,6 @@ class MNIST(Data):
 						for mode in ('train', 'test')}
 
 		if val_split is not None: self._split_val(val_split)
-
-		self._transforms = ToTensor()
 
 _data_wiki = {'mnist': MNIST}
 
