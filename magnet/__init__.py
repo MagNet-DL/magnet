@@ -1,4 +1,4 @@
-from .autograd import eval, device
+from .autograd import eval, device, build_lock
 
 def __print_init_message():
 	from torch.cuda import get_device_name

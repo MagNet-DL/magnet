@@ -3,6 +3,9 @@ import torch
 from contextlib import contextmanager
 
 device = 'cuda' if torch.cuda.is_available() else 'cpu'
+device = torch.device(device)
+
+build_lock = True
 
 def eval(*modules):
 	"""A Context Manager that makes it easy to run statements in eval mode.
