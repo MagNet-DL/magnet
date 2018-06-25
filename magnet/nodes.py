@@ -6,7 +6,23 @@ from torch.nn import functional as F
 
 from ._utils import caller_locals, get_function_name
 
-class Node(nn.Module):
+class Module(nn.Module):
+	def __init__(self, *args, **kwargs):
+		super().__init__(*args, **kwargs)
+
+	def to(self, *args, **kwargs):
+		super().to(*args, **kwargs)
+		try: self.device = next(self.parameters())[0].device
+		except: pass
+		return self
+
+	def load_state_dict(self, f):
+		device = self.device.type
+		if device == 'cuda': device = 'cuda:0'
+
+		super().load_state_dict(torch.load(f, map_location=device))
+
+class Node(Module):
 	configuration = {}
 
 	def __init__(self, *args, **kwargs):
@@ -68,9 +84,6 @@ class Node(nn.Module):
 	def get_args(self):
 		return ', '.join(str(k) + '=' + str(v) for k, v in self._args.items())
 
-	def get_output_shape(self, in_shape):
-		with torch.no_grad(): return tuple(self(torch.randn(in_shape)).size())
-
 	def  _mul_int(self, n):
 		return [self] + [self.__class__(**self._args) for _ in range(n - 1)]
 
@@ -83,18 +96,6 @@ class Node(nn.Module):
 
 		if type(n) is tuple or type(n) is list:
 			return self._mul_list(n)
-
-	def to(self, *args, **kwargs):
-		super().to(*args, **kwargs)
-		try: self.device = next(self.parameters())[0].device
-		except: pass
-		return self
-
-	def load_state_dict(self, f):
-		device = mag.device.type
-		if device == 'cuda': device = 'cuda:0'
-
-		super().load_state_dict(torch.load(f, map_location=device))
 
 class MonoNode(Node):
 	configuration = {'act': 'relu'}
