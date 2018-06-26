@@ -38,8 +38,8 @@ class Trainer:
 	def _on_training_end(self):
 		pass
 
-class SimpleTrainer(Trainer):
-	def __init__(self, model, data, loss, optimizer='adam'):
+class SupervisedTrainer(Trainer):
+	def __init__(self, model, data, loss, optimizer='adam', metrics=None):
 		super().__init__()
 
 		self._model = model
@@ -49,25 +49,36 @@ class SimpleTrainer(Trainer):
 
 		self._history['loss'] = []
 
+		if isinstance(metrics, str): self._metrics = {metrics: _metrics_wiki[metrics.lower()]}
+		elif isinstance(metrics, (tuple, list)): self._metrics = {m: _metrics_wiki[m.lower()] for m in metrics}
+		elif isinstance(metrics, dict): self._metrics = metrics
+
+		if metrics is not None:
+			for k in self._metrics.keys(): self._history[k] = []
+
 	def show_history(self):
 		self._history.show('loss', log=True)
+		for k in self._metrics.keys(): self._history.show(k)
 
 	def _on_training_start(self):
 		self._dl = iter(self._data())
 		self._batches_per_epoch = len(self._dl)
 		self._history['buffer'] = {'loss': []}
+		self._history['buffer'].update({k: [] for k in self._metrics.keys()})
 
 	def _in_batch(self, batch):
-		loss = self._get_loss(self._dl)
+		x, y = next(self._dl)
+		y_pred = self._model(x)
+
+		loss = self._loss(y_pred, y)
+
 		loss.backward()
 		self._optimizer.step()
 		self._optimizer.zero_grad()
 
 		self._history['buffer']['loss'].append(loss.item())
-
-	def _get_loss(self, dataloader):
-		x, y = next(self._dl)
-		return self._loss(self._model(x), y)
+		for k in self._metrics.keys():
+			self._history['buffer'][k].append(self._metrics[k](y_pred, y).item())
 
 	def _get_optimizer(self, optimizer):
 		from torch import optim
@@ -100,3 +111,9 @@ class History(dict):
 					self['buffer'][k] = []
 				except KeyError: pass
 		except KeyError: pass
+
+def accuracy(scores, y):
+	y_pred = scores.max(1)[1]
+	return (y_pred == y).float().mean()
+
+_metrics_wiki = {'accuracy': accuracy}
