@@ -86,6 +86,12 @@ class SupervisedTrainer(Trainer):
 		if optimizer == 'adam':
 			return optim.Adam(self._model.parameters(), amsgrad=True)
 
+class ClassifierTrainer(SupervisedTrainer):
+	def __init__(self, model, data, optimizer='adam'):
+		from torch import nn
+
+		super().__init__(model, data, nn.CrossEntropyLoss(), optimizer, metrics='accuracy')
+
 class History(dict):
 	def show(self, key, log=False):
 		from matplotlib import pyplot as plt
