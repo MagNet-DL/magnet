@@ -1,3 +1,5 @@
+import magnet as mag
+
 class Trainer:
 	def __init__(self, models, data, optimizers):
 		self._models = models
@@ -10,9 +12,14 @@ class Trainer:
 	def _optimize(self, dataloader):
 		raise NotImplementedError
 
+	def _validate(self, dataloader):
+		pass
+
 	def train(self, iterations=1, monitor_freq=1):
-		self._dl = iter(self._data())
-		self._batches_per_epoch = len(self._dl)
+		dataloader = {'train': iter(self._data())}
+		dataloader['val'] = iter(self._data(mode='val'))
+
+		self._batches_per_epoch = len(dataloader['train'])
 
 		self._on_training_start()
 
@@ -24,11 +31,13 @@ class Trainer:
 
 			self._on_batch_start(batch)
 
-			self._optimize(self._dl)
+			self._optimize(dataloader['train'])
 
 			self._on_batch_end(batch)
 
-			if not batch % monitor_freq: self._history.flush()
+			if not batch % monitor_freq:
+				with mag.eval(*self._models): self._validate(dataloader['val'])
+				self._history.flush()
 
 			try:
 				if not (batch + 1) % self._batches_per_epoch:
@@ -83,6 +92,18 @@ class SupervisedTrainer(Trainer):
 		self._history.append('loss', loss.item())
 		for k in self._metrics.keys():
 			self._history.append(k, self._metrics[k](y_pred, y).item())
+
+	def _validate(self, dataloader):
+		model = self._models[0]; loss_fn = self._loss; optimizer = self._optimizers[0]
+
+		x, y = next(dataloader)
+		y_pred = model(x)
+
+		loss = loss_fn(y_pred, y)
+
+		self._history.append('loss', loss.item(), validation=True)
+		for k in self._metrics.keys():
+			self._history.append(k, self._metrics[k](y_pred, y).item(), validation=True)
 
 	def _get_optimizer(self, optimizer):
 		from torch import optim
