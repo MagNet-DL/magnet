@@ -63,7 +63,11 @@ class Trainer:
 		if keys is None:
 			keys = [k for k in self._history.keys() if k not in ('batches', ) and k[:4] != 'val_']
 
-		for k in keys: self._history.show(k, log=True, x_key=vs, xlabel=xlabel)
+		for k in keys:
+			if 'loss' in k:
+				self._history.show(k, log=True, x_key=vs, xlabel=xlabel)
+			else:
+				self._history.show(k, x_key=vs, xlabel=xlabel)
 
 	def _on_training_start(self):
 		pass
@@ -92,32 +96,30 @@ class SupervisedTrainer(Trainer):
 		self._set_metrics(metrics)
 
 	def _optimize(self, dataloader, batch):
-		model = self._models[0]; loss_fn = self._loss; optimizer = self._optimizers[0]
+		optimizer = self._optimizers[0]
 
-		x, y = next(dataloader)
-		y_pred = model(x)
-
-		loss = loss_fn(y_pred, y)
+		loss = self._get_loss(dataloader)
 
 		loss.backward()
 		optimizer.step()
 		optimizer.zero_grad()
 
-		self._history.append('loss', loss.item(), buffer=True)
-		for k in self._metrics.keys():
-			self._history.append(k, self._metrics[k](y_pred, y).item(), buffer=True)
-
 	def _validate(self, dataloader):
-		model = self._models[0]; loss_fn = self._loss; optimizer = self._optimizers[0]
+		self._get_loss(dataloader, validation=True)
+
+	def _get_loss(self, dataloader, validation=False):
+		model = self._models[0]; loss_fn = self._loss
 
 		x, y = next(dataloader)
 		y_pred = model(x)
 
 		loss = loss_fn(y_pred, y)
 
-		self._history.append('loss', loss.item(), validation=True, buffer=True)
+		self._history.append('loss', loss.item(), validation=validation, buffer=True)
 		for k in self._metrics.keys():
-			self._history.append(k, self._metrics[k](y_pred, y).item(), validation=True, buffer=True)
+			self._history.append(k, self._metrics[k](y_pred, y).item(), validation=validation, buffer=True)
+
+		return loss
 
 	def _get_optimizer(self, optimizer):
 		from torch import optim
