@@ -3,36 +3,53 @@ class History(dict):
 		super().__init__(**kwargs)
 		self.buffer = {}
 
-	def append(self, key, value, validation=False):
+	def append(self, key, value, validation=False, buffer=False):
 		if validation: key = 'val_' + key
+
+		if not buffer:
+			try: self[key].append(value)
+			except KeyError: self[key] = [value]
+			return
 
 		try:
 			self.buffer[key].append(value)
 		except KeyError:
 			self.buffer[key] = [value]
 
-	def show(self, key=None, log=False):
+	def show(self, key=None, log=False, x_key=None, xlabel=None):
 		from matplotlib import pyplot as plt
 		if key is None:
 			for k in self.keys(): self.show(k, log)
 			return
 
-		x = self[key]
-		if len(x) == 0: return
-		if len(x) == 1:
-			print(key, '=', x)
+		y = self[key]
+		if len(y) == 0: return
+		if len(y) == 1:
+			print(key, '=', y)
 			return
 
-		plt.plot(x, label='training')
+		if x_key is None: x = list(range(len(y)))
+		elif isinstance(x_key, (tuple, list)): x = x_key
+		else: x = self[x_key]
+
+		plt.plot(x, y, label='training')
 		try:
-			x_val = self['val_' + key]
-			if len(x_val) == len(x):
-				plt.plot(x_val, label='validation')
+			y_val = self['val_' + key]
+			if len(y_val) == len(y):
+				plt.plot(x, y_val, label='validation')
 				plt.legend()
 		except KeyError: pass
 
 		if log: plt.yscale('log')
-		plt.title(key.title())
+
+		plt.ylabel(key.title())
+		if isinstance(xlabel, str):
+			plt.xlabel(xlabel)
+			plt.title(f'{key.title()} vs {xlabel.title()}')
+		elif isinstance(x_key, str):
+			plt.xlabel(x_key)
+			plt.title(f'{key.title()} vs {x_key.title()}')
+		else: plt.title(key.title())
 		plt.show()
 
 	def flush(self, key=None):

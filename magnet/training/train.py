@@ -7,9 +7,9 @@ class Trainer:
 		self._optimizers = optimizers
 
 		from magnet.training.history import History
-		self._history = History(batch=0)
+		self._history = History()
 
-	def _optimize(self, dataloader):
+	def _optimize(self, dataloader, batch):
 		raise NotImplementedError
 
 	def _validate(self, dataloader):
@@ -31,11 +31,12 @@ class Trainer:
 
 			self._on_batch_start(batch)
 
-			self._optimize(dataloader['train'])
+			self._optimize(dataloader['train'], batch)
 
 			self._on_batch_end(batch)
 
 			if not batch % monitor_freq:
+				self._history.append('batches', batch)
 				with mag.eval(*self._models): self._validate(dataloader['val'])
 				self._history.flush()
 
@@ -43,13 +44,19 @@ class Trainer:
 				if not (batch + 1) % self._batches_per_epoch:
 					self._on_epoch_end(int(batch // self._batches_per_epoch))
 			except AttributeError: pass
-			self._history['batch'] += 1
 
 		self._on_training_end()
 
-	def show_history(self):
-		self._history.show('loss', log=True)
-		for k in self._metrics.keys(): self._history.show(k)
+	def show_history(self, vs='batches'):
+		xlabel = None
+
+		vs = vs.lower()
+		if vs == 'epochs':
+			vs = [b / self._batches_per_epoch for b in self._history['batches']]
+			xlabel = 'epochs'
+
+		self._history.show('loss', log=True, x_key=vs, xlabel=xlabel)
+		for k in self._metrics.keys(): self._history.show(k, x_key=vs, xlabel=xlabel)
 
 	def _on_training_start(self):
 		pass
@@ -77,7 +84,7 @@ class SupervisedTrainer(Trainer):
 		self._loss = loss
 		self._set_metrics(metrics)
 
-	def _optimize(self, dataloader):
+	def _optimize(self, dataloader, batch):
 		model = self._models[0]; loss_fn = self._loss; optimizer = self._optimizers[0]
 
 		x, y = next(dataloader)
@@ -89,9 +96,9 @@ class SupervisedTrainer(Trainer):
 		optimizer.step()
 		optimizer.zero_grad()
 
-		self._history.append('loss', loss.item())
+		self._history.append('loss', loss.item(), buffer=True)
 		for k in self._metrics.keys():
-			self._history.append(k, self._metrics[k](y_pred, y).item())
+			self._history.append(k, self._metrics[k](y_pred, y).item(), buffer=True)
 
 	def _validate(self, dataloader):
 		model = self._models[0]; loss_fn = self._loss; optimizer = self._optimizers[0]
@@ -101,9 +108,9 @@ class SupervisedTrainer(Trainer):
 
 		loss = loss_fn(y_pred, y)
 
-		self._history.append('loss', loss.item(), validation=True)
+		self._history.append('loss', loss.item(), validation=True, buffer=True)
 		for k in self._metrics.keys():
-			self._history.append(k, self._metrics[k](y_pred, y).item(), validation=True)
+			self._history.append(k, self._metrics[k](y_pred, y).item(), validation=True, buffer=True)
 
 	def _get_optimizer(self, optimizer):
 		from torch import optim
