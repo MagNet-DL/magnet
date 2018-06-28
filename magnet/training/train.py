@@ -1,7 +1,14 @@
 class Trainer:
-	def __init__(self):
+	def __init__(self, models, data, optimizers):
+		self._models = models
+		self._data = data
+		self._optimizers = optimizers
+
 		from magnet.training.history import History
 		self._history = History(batch=0)
+
+	def _optimize(self):
+		pass
 
 	def train(self, iterations=1, monitor_freq=1):
 		self._on_training_start()
@@ -12,7 +19,11 @@ class Trainer:
 					self._on_epoch_start(int(batch // self._batches_per_epoch))
 			except AttributeError: pass
 
-			self._in_batch(batch)
+			self._on_batch_start(batch)
+
+			self._optimize()
+
+			self._on_batch_start(batch)
 
 			if not batch % monitor_freq: self._history.free_buffers()
 
@@ -30,7 +41,10 @@ class Trainer:
 	def _on_epoch_start(self, epoch):
 		pass
 
-	def _in_batch(self, batch):
+	def _on_batch_start(self, batch):
+		pass
+
+	def _on_batch_start(self, batch):
 		pass
 
 	def _on_epoch_end(self, epoch):
@@ -41,15 +55,11 @@ class Trainer:
 
 class SupervisedTrainer(Trainer):
 	def __init__(self, model, data, loss, optimizer='adam', metrics=None):
-		super().__init__()
+		super().__init__([model], data, optimizers=None)
 
-		self._model = model
-		self._data = data
+		self._optimizers = [self._get_optimizer(optimizer)]
 		self._loss = loss
-		self._optimizer = self._get_optimizer(optimizer)
-
 		self._history['loss'] = []
-
 		self._set_metrics(metrics)
 
 	def show_history(self):
@@ -62,15 +72,17 @@ class SupervisedTrainer(Trainer):
 		self._history['buffer'] = {'loss': []}
 		self._history['buffer'].update({k: [] for k in self._metrics.keys()})
 
-	def _in_batch(self, batch):
-		x, y = next(self._dl)
-		y_pred = self._model(x)
+	def _optimize(self):
+		model = self._models[0]; loss_fn = self._loss; optimizer = self._optimizers[0]
 
-		loss = self._loss(y_pred, y)
+		x, y = next(self._dl)
+		y_pred = model(x)
+
+		loss = loss_fn(y_pred, y)
 
 		loss.backward()
-		self._optimizer.step()
-		self._optimizer.zero_grad()
+		optimizer.step()
+		optimizer.zero_grad()
 
 		self._history['buffer']['loss'].append(loss.item())
 		for k in self._metrics.keys():
@@ -80,7 +92,7 @@ class SupervisedTrainer(Trainer):
 		from torch import optim
 
 		if optimizer == 'adam':
-			return optim.Adam(self._model.parameters(), amsgrad=True)
+			return optim.Adam(self._models[0].parameters(), amsgrad=True)
 
 	def _set_metrics(self, metrics):
 		from magnet.training import metrics as metrics_module
