@@ -7,10 +7,13 @@ class Trainer:
 		from magnet.training.history import History
 		self._history = History(batch=0)
 
-	def _optimize(self):
+	def _optimize(self, dataloader):
 		raise NotImplementedError
 
 	def train(self, iterations=1, monitor_freq=1):
+		self._dl = iter(self._data())
+		self._batches_per_epoch = len(self._dl)
+
 		self._on_training_start()
 
 		for batch in range(iterations):
@@ -21,9 +24,9 @@ class Trainer:
 
 			self._on_batch_start(batch)
 
-			self._optimize()
+			self._optimize(self._dl)
 
-			self._on_batch_start(batch)
+			self._on_batch_end(batch)
 
 			if not batch % monitor_freq: self._history.flush()
 
@@ -48,7 +51,7 @@ class Trainer:
 	def _on_batch_start(self, batch):
 		pass
 
-	def _on_batch_start(self, batch):
+	def _on_batch_end(self, batch):
 		pass
 
 	def _on_epoch_end(self, epoch):
@@ -65,14 +68,10 @@ class SupervisedTrainer(Trainer):
 		self._loss = loss
 		self._set_metrics(metrics)
 
-	def _on_training_start(self):
-		self._dl = iter(self._data())
-		self._batches_per_epoch = len(self._dl)
-
-	def _optimize(self):
+	def _optimize(self, dataloader):
 		model = self._models[0]; loss_fn = self._loss; optimizer = self._optimizers[0]
 
-		x, y = next(self._dl)
+		x, y = next(dataloader)
 		y_pred = model(x)
 
 		loss = loss_fn(y_pred, y)
