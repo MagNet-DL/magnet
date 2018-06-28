@@ -8,7 +8,7 @@ class Trainer:
 		self._history = History(batch=0)
 
 	def _optimize(self):
-		pass
+		raise NotImplementedError
 
 	def train(self, iterations=1, monitor_freq=1):
 		self._on_training_start()
@@ -25,7 +25,7 @@ class Trainer:
 
 			self._on_batch_start(batch)
 
-			if not batch % monitor_freq: self._history.free_buffers()
+			if not batch % monitor_freq: self._history.flush()
 
 			try:
 				if not (batch + 1) % self._batches_per_epoch:
@@ -34,6 +34,10 @@ class Trainer:
 			self._history['batch'] += 1
 
 		self._on_training_end()
+
+	def show_history(self):
+		self._history.show('loss', log=True)
+		for k in self._metrics.keys(): self._history.show(k)
 
 	def _on_training_start(self):
 		pass
@@ -59,18 +63,11 @@ class SupervisedTrainer(Trainer):
 
 		self._optimizers = [self._get_optimizer(optimizer)]
 		self._loss = loss
-		self._history['loss'] = []
 		self._set_metrics(metrics)
-
-	def show_history(self):
-		self._history.show('loss', log=True)
-		for k in self._metrics.keys(): self._history.show(k)
 
 	def _on_training_start(self):
 		self._dl = iter(self._data())
 		self._batches_per_epoch = len(self._dl)
-		self._history['buffer'] = {'loss': []}
-		self._history['buffer'].update({k: [] for k in self._metrics.keys()})
 
 	def _optimize(self):
 		model = self._models[0]; loss_fn = self._loss; optimizer = self._optimizers[0]
@@ -84,9 +81,9 @@ class SupervisedTrainer(Trainer):
 		optimizer.step()
 		optimizer.zero_grad()
 
-		self._history['buffer']['loss'].append(loss.item())
+		self._history.append('loss', loss.item())
 		for k in self._metrics.keys():
-			self._history['buffer'][k].append(self._metrics[k](y_pred, y).item())
+			self._history.append(k, self._metrics[k](y_pred, y).item())
 
 	def _get_optimizer(self, optimizer):
 		from torch import optim
@@ -99,9 +96,6 @@ class SupervisedTrainer(Trainer):
 		if isinstance(metrics, str): self._metrics = {metrics: getattr(metrics_module, metrics.lower())}
 		elif isinstance(metrics, (tuple, list)): self._metrics = {m: getattr(metrics_module, m.lower()) for m in metrics}
 		elif isinstance(metrics, dict): self._metrics = metrics
-
-		if metrics is not None:
-			for k in self._metrics.keys(): self._history[k] = []
 
 class ClassifierTrainer(SupervisedTrainer):
 	def __init__(self, model, data, optimizer='adam'):

@@ -1,4 +1,14 @@
 class History(dict):
+	def __init__(self, **kwargs):
+		super().__init__(**kwargs)
+		self.buffer = {}
+
+	def append(self, key, value):
+		try:
+			self.buffer[key].append(value)
+		except KeyError:
+			self.buffer[key] = [value]
+
 	def show(self, key, log=False):
 		from matplotlib import pyplot as plt
 
@@ -11,15 +21,14 @@ class History(dict):
 		plt.title(key.title())
 		plt.show()
 
-	def free_buffers(self):
-		mean = lambda x: sum(x) / len(x)
+	def flush(self, key=None):
+		if key is None:
+			for k in self.buffer.keys(): self.flush(k)
+			return
 
-		try:
-			for k, v in self['buffer'].items():
-				if type(v) is not list: continue
+		value = self.buffer[key]
+		value = sum(value) / len(value) # Mean
 
-				try:
-					self[k].append(mean(v))
-					self['buffer'][k] = []
-				except KeyError: pass
-		except KeyError: pass
+		try: self[key].append(value)
+		except KeyError: self[key] = [value]
+		finally: self.buffer[key] = []
