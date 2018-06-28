@@ -50,14 +50,7 @@ class SupervisedTrainer(Trainer):
 
 		self._history['loss'] = []
 
-		if isinstance(metrics, str): self._metrics = {metrics: _metrics_wiki[metrics.lower()]}
-		elif isinstance(metrics, (tuple, list)):
-			from magnet.training import metrics
-			self._metrics = {m: getattr(metrics, m.lower()) for m in metrics}
-		elif isinstance(metrics, dict): self._metrics = metrics
-
-		if metrics is not None:
-			for k in self._metrics.keys(): self._history[k] = []
+		self._set_metrics(metrics)
 
 	def show_history(self):
 		self._history.show('loss', log=True)
@@ -88,6 +81,15 @@ class SupervisedTrainer(Trainer):
 
 		if optimizer == 'adam':
 			return optim.Adam(self._model.parameters(), amsgrad=True)
+
+	def _set_metrics(self, metrics):
+		from magnet.training import metrics as metrics_module
+		if isinstance(metrics, str): self._metrics = {metrics: getattr(metrics_module, metrics.lower())}
+		elif isinstance(metrics, (tuple, list)): self._metrics = {m: getattr(metrics_module, m.lower()) for m in metrics}
+		elif isinstance(metrics, dict): self._metrics = metrics
+
+		if metrics is not None:
+			for k in self._metrics.keys(): self._history[k] = []
 
 class ClassifierTrainer(SupervisedTrainer):
 	def __init__(self, model, data, optimizer='adam'):
