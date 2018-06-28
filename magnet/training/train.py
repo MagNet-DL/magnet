@@ -1,5 +1,6 @@
 class Trainer:
 	def __init__(self):
+		from magnet.training.history import History
 		self._history = History(batch=0)
 
 	def train(self, iterations=1, monitor_freq=1):
@@ -50,7 +51,9 @@ class SupervisedTrainer(Trainer):
 		self._history['loss'] = []
 
 		if isinstance(metrics, str): self._metrics = {metrics: _metrics_wiki[metrics.lower()]}
-		elif isinstance(metrics, (tuple, list)): self._metrics = {m: _metrics_wiki[m.lower()] for m in metrics}
+		elif isinstance(metrics, (tuple, list)):
+			from magnet.training import metrics
+			self._metrics = {m: getattr(metrics, m.lower()) for m in metrics}
 		elif isinstance(metrics, dict): self._metrics = metrics
 
 		if metrics is not None:
@@ -91,35 +94,3 @@ class ClassifierTrainer(SupervisedTrainer):
 		from torch import nn
 
 		super().__init__(model, data, nn.CrossEntropyLoss(), optimizer, metrics='accuracy')
-
-class History(dict):
-	def show(self, key, log=False):
-		from matplotlib import pyplot as plt
-
-		x = self[key]
-		if len(x) == 0: return
-		if len(x) == 1: print(key, '=', x)
-
-		plt.plot(x)
-		if log: plt.yscale('log')
-		plt.title(key.title())
-		plt.show()
-
-	def free_buffers(self):
-		mean = lambda x: sum(x) / len(x)
-
-		try:
-			for k, v in self['buffer'].items():
-				if type(v) is not list: continue
-
-				try:
-					self[k].append(mean(v))
-					self['buffer'][k] = []
-				except KeyError: pass
-		except KeyError: pass
-
-def accuracy(scores, y):
-	y_pred = scores.max(1)[1]
-	return (y_pred == y).float().mean()
-
-_metrics_wiki = {'accuracy': accuracy}
