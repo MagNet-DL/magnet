@@ -15,18 +15,20 @@ class Trainer:
 	def _validate(self, dataloader):
 		pass
 
-	def train(self, iterations=1, monitor_freq=1):
+	def train(self, epochs=1, iterations=-1, monitor_freq=1):
+		self._on_training_start()
+
 		dataloader = {'train': iter(self._data())}
 		dataloader['val'] = iter(self._data(mode='val'))
 
 		self._batches_per_epoch = len(dataloader['train'])
 
-		self._on_training_start()
+		if iterations < 0: iterations = int(epochs * self._batches_per_epoch)
 
 		for batch in range(iterations):
 			try:
 				if not batch % self._batches_per_epoch:
-					self._on_epoch_start(int(batch // self._batches_per_epoch))
+					self._on_epoch_start(int(batch * self._batches_per_epoch))
 			except AttributeError: pass
 
 			self._on_batch_start(batch)
@@ -54,6 +56,9 @@ class Trainer:
 		if vs == 'epochs':
 			vs = [b / self._batches_per_epoch for b in self._history['batches']]
 			xlabel = 'epochs'
+		elif vs in ('batches', 'iterations'):
+			vs = 'batches'
+			xlabel = 'iterations'
 
 		self._history.show('loss', log=True, x_key=vs, xlabel=xlabel)
 		for k in self._metrics.keys(): self._history.show(k, x_key=vs, xlabel=xlabel)
