@@ -37,7 +37,7 @@ class Trainer:
 
 			self._on_batch_end(batch)
 
-			if not batch % monitor_freq:
+			if not batch % monitor_freq and batch != 0:
 				self._history.append('batches', batch)
 				with mag.eval(*self._models): self._validate(dataloader['val'])
 				self._history.flush()
@@ -49,7 +49,7 @@ class Trainer:
 
 		self._on_training_end()
 
-	def show_history(self, vs='batches'):
+	def show_history(self, keys=None, vs='batches'):
 		xlabel = None
 
 		vs = vs.lower()
@@ -60,8 +60,10 @@ class Trainer:
 			vs = 'batches'
 			xlabel = 'iterations'
 
-		self._history.show('loss', log=True, x_key=vs, xlabel=xlabel)
-		for k in self._metrics.keys(): self._history.show(k, x_key=vs, xlabel=xlabel)
+		if keys is None:
+			keys = [k for k in self._history.keys() if k not in ('batches', ) and k[:4] != 'val_']
+
+		for k in keys: self._history.show(k, log=True, x_key=vs, xlabel=xlabel)
 
 	def _on_training_start(self):
 		pass
