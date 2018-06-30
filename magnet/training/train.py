@@ -15,7 +15,7 @@ class Trainer:
 	def _validate(self, dataloader):
 		pass
 
-	def train(self, epochs=1, iterations=-1, monitor_freq=1, batch_size=1, shuffle=True):
+	def train(self, epochs=1, iterations=-1, monitor_freq=10, batch_size=1, shuffle=True):
 		self._on_training_start()
 
 		dataloader = {'train': iter(self._data(batch_size, shuffle))}
@@ -29,6 +29,8 @@ class Trainer:
 		except KeyError: start_iteration = 0
 
 		for batch in range(start_iteration, start_iteration + iterations):
+			is_last_batch = (batch == start_iteration + iterations - 1)
+
 			try:
 				if not batch % self._batches_per_epoch:
 					self._on_epoch_start(int(batch * self._batches_per_epoch))
@@ -40,7 +42,7 @@ class Trainer:
 
 			self._on_batch_end(batch)
 
-			if not batch % monitor_freq and batch != 0:
+			if is_last_batch or (not batch % int(self._batches_per_epoch // monitor_freq) and batch != 0):
 				self._history.append('batches', batch)
 				with mag.eval(*self._models): self._validate(dataloader['val'])
 				self._history.flush()
@@ -118,9 +120,9 @@ class SupervisedTrainer(Trainer):
 
 		loss = loss_fn(y_pred, y)
 
-		self._history.append('loss', loss.item(), validation=validation, buffer=True)
+		self._history.append('loss', loss.item(), validation=validation, buffer=(not validation))
 		for k in self._metrics.keys():
-			self._history.append(k, self._metrics[k](y_pred, y).item(), validation=validation, buffer=True)
+			self._history.append(k, self._metrics[k](y_pred, y).item(), validation=validation, buffer=(not validation))
 
 		return loss
 
