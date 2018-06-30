@@ -15,11 +15,11 @@ class Trainer:
 	def _validate(self, dataloader):
 		pass
 
-	def train(self, epochs=1, iterations=-1, monitor_freq=1):
+	def train(self, epochs=1, iterations=-1, monitor_freq=1, batch_size=1, shuffle=True):
 		self._on_training_start()
 
-		dataloader = {'train': iter(self._data())}
-		dataloader['val'] = iter(self._data(mode='val'))
+		dataloader = {'train': iter(self._data(batch_size, shuffle))}
+		dataloader['val'] = iter(self._data(batch_size, shuffle=False, mode='val'))
 
 		self._batches_per_epoch = len(dataloader['train'])
 
