@@ -15,21 +15,30 @@ class Trainer:
 	def _validate(self, dataloader, validation_batches):
 		pass
 
-	def train(self, epochs=1, iterations=-1, monitor_freq=10, validate_freq=-1, validation_batches=-1, batch_size=1, shuffle=True):
+	def train(self, epochs=1, batch_size=1, shuffle=True, **kwargs):
 		from magnet._utils import get_tqdm; tqdm = get_tqdm()
+		from magnet import data as data_module
 
-		if validate_freq < 0: validate_freq = monitor_freq
+		monitor_freq=kwargs.pop('monitor_freq', 10)
+		validate_freq=kwargs.pop('validate_freq', monitor_freq)
+		batch_size_val=kwargs.pop('batch_size_val', batch_size)
+		shuffle_val=kwargs.pop('shuffle_val', False)
 
 		self._on_training_start()
 
-		dataloader = {'train': iter(self._data(batch_size, shuffle))}
-		dataloader['val'] = iter(self._data(batch_size, shuffle=False, mode='val'))
+		if isinstance(self._data, data_module.Data):
+			dataloader = {'train': iter(self._data(batch_size, shuffle))}
 
-		if validation_batches < 0: validation_batches = int(len(dataloader['val']) // validate_freq)
+			if batch_size_val < 0: batch_size_val = batch_size
+			dataloader['val'] = iter(self._data(batch_size_val, shuffle=shuffle_val, mode='val'))
+		elif isinstance(self._data, (tuple, list)):
+			dataloader = {'train': iter(self._data[0]), 'val': iter(self._data[1])}
+
+		validation_batches=kwargs.pop('validation_batches', int(len(dataloader['val']) // validate_freq))
 
 		self._batches_per_epoch = len(dataloader['train'])
 
-		if iterations < 0: iterations = int(epochs * self._batches_per_epoch)
+		iterations = kwargs.pop('batch_size_val', int(epochs * self._batches_per_epoch))
 
 		try: start_iteration = self._history['batches'][-1]
 		except KeyError: start_iteration = 0
