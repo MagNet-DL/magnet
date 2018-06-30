@@ -25,7 +25,10 @@ class Trainer:
 
 		if iterations < 0: iterations = int(epochs * self._batches_per_epoch)
 
-		for batch in range(iterations):
+		try: start_iteration = self._history['batches'][-1]
+		except KeyError: start_iteration = 0
+
+		for batch in range(start_iteration, start_iteration + iterations):
 			try:
 				if not batch % self._batches_per_epoch:
 					self._on_epoch_start(int(batch * self._batches_per_epoch))
