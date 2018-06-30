@@ -57,9 +57,11 @@ class Trainer:
 
 		self._on_training_end()
 
-	def show_history(self, keys=None, vs='batches'):
+	def show_history(self, keys=None, vs=None):
 		xlabel = None
 
+		if vs is None:
+			vs = 'epochs' if self._history['batches'][-1] > self._batches_per_epoch else 'batches'
 		vs = vs.lower()
 		if vs == 'epochs':
 			vs = [b / self._batches_per_epoch for b in self._history['batches']]
