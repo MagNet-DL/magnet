@@ -12,16 +12,20 @@ class Trainer:
 	def _optimize(self, dataloader, batch):
 		raise NotImplementedError
 
-	def _validate(self, dataloader):
+	def _validate(self, dataloader, validation_batches):
 		pass
 
-	def train(self, epochs=1, iterations=-1, monitor_freq=10, batch_size=1, shuffle=True):
+	def train(self, epochs=1, iterations=-1, monitor_freq=10, validate_freq=-1, validation_batches=-1, batch_size=1, shuffle=True):
 		from magnet._utils import get_tqdm; tqdm = get_tqdm()
+
+		if validate_freq < 0: validate_freq = monitor_freq
 
 		self._on_training_start()
 
 		dataloader = {'train': iter(self._data(batch_size, shuffle))}
 		dataloader['val'] = iter(self._data(batch_size, shuffle=False, mode='val'))
+
+		if validation_batches < 0: validation_batches = int(len(dataloader['val']) // validate_freq)
 
 		self._batches_per_epoch = len(dataloader['train'])
 
@@ -47,8 +51,11 @@ class Trainer:
 
 			self._on_batch_end(batch)
 
+			if is_last_batch or (not batch % int(self._batches_per_epoch // validate_freq) and batch != 0):
+				with mag.eval(*self._models): self._validate(dataloader['val'], validation_batches)
+
 			if is_last_batch or (not batch % int(self._batches_per_epoch // monitor_freq) and batch != 0):
-				self._monitor(batch, dataloader['val'], progress_bar=progress_bar)
+				self._monitor(batch, progress_bar=progress_bar)
 
 			try:
 				if not (batch + 1) % self._batches_per_epoch:
@@ -91,9 +98,8 @@ class Trainer:
 	def _on_batch_end(self, batch):
 		pass
 
-	def _monitor(self, batch, dataloader, **kwargs):
+	def _monitor(self, batch, **kwargs):
 		self._history.append('batches', batch)
-		with mag.eval(*self._models): self._validate(dataloader)
 		self._history.flush()
 
 	def _on_epoch_end(self, epoch):
@@ -119,8 +125,8 @@ class SupervisedTrainer(Trainer):
 		optimizer.step()
 		optimizer.zero_grad()
 
-	def _validate(self, dataloader):
-		self._get_loss(dataloader, validation=True)
+	def _validate(self, dataloader, validation_batches):
+		for _ in range(validation_batches): self._get_loss(dataloader, validation=True)
 
 	def _get_loss(self, dataloader, validation=False):
 		model = self._models[0]; loss_fn = self._loss
@@ -130,9 +136,9 @@ class SupervisedTrainer(Trainer):
 
 		loss = loss_fn(y_pred, y)
 
-		self._history.append('loss', loss.item(), validation=validation, buffer=(not validation))
+		self._history.append('loss', loss.item(), validation=validation, buffer=True)
 		for k in self._metrics.keys():
-			self._history.append(k, self._metrics[k](y_pred, y).item(), validation=validation, buffer=(not validation))
+			self._history.append(k, self._metrics[k](y_pred, y).item(), validation=validation, buffer=True)
 
 		return loss
 
@@ -148,8 +154,8 @@ class SupervisedTrainer(Trainer):
 		elif isinstance(metrics, (tuple, list)): self._metrics = {m: getattr(metrics_module, m.lower()) for m in metrics}
 		elif isinstance(metrics, dict): self._metrics = metrics
 
-	def _monitor(self, batch, dataloader, **kwargs):
-		super()._monitor(batch, dataloader, **kwargs)
+	def _monitor(self, batch, **kwargs):
+		super()._monitor(batch, **kwargs)
 		progress_bar = kwargs.pop('progress_bar')
 
 		loss = self._history['loss'][-1]; val_loss = self._history['val_loss'][-1]
