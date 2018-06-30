@@ -58,6 +58,8 @@ class History(dict):
 			return
 
 		value = self.buffer[key]
+		if len(value) == 0: return
+		
 		value = sum(value) / len(value) # Mean
 
 		try: self[key].append(value)

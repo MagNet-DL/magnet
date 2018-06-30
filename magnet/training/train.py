@@ -167,8 +167,12 @@ class SupervisedTrainer(Trainer):
 		super()._monitor(batch, **kwargs)
 		progress_bar = kwargs.pop('progress_bar')
 
-		loss = self._history['loss'][-1]; val_loss = self._history['val_loss'][-1]
-		progress_bar.set_description(f'{loss:.2f}, {val_loss:.2f}', refresh=False)
+		loss = self._history['loss'][-1]; 
+		try: 
+			val_loss = self._history['val_loss'][-1]
+			progress_bar.set_description(f'{loss:.2f}, {val_loss:.2f}', refresh=False)
+		except KeyError: 
+			progress_bar.set_description(f'{loss:.2f}', refresh=False)
 
 class ClassifierTrainer(SupervisedTrainer):
 	def __init__(self, model, data, optimizer='adam'):
