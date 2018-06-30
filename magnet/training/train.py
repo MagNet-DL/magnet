@@ -16,6 +16,8 @@ class Trainer:
 		pass
 
 	def train(self, epochs=1, iterations=-1, monitor_freq=10, batch_size=1, shuffle=True):
+		from magnet._utils import get_tqdm; tqdm = get_tqdm()
+
 		self._on_training_start()
 
 		dataloader = {'train': iter(self._data(batch_size, shuffle))}
@@ -28,7 +30,10 @@ class Trainer:
 		try: start_iteration = self._history['batches'][-1]
 		except KeyError: start_iteration = 0
 
-		for batch in range(start_iteration, start_iteration + iterations):
+		progress_bar = tqdm(range(start_iteration, start_iteration + iterations), unit_scale=True,
+							unit_divisor=self._batches_per_epoch, leave=False)
+
+		for batch in progress_bar:
 			is_last_batch = (batch == start_iteration + iterations - 1)
 
 			try:
@@ -43,9 +48,7 @@ class Trainer:
 			self._on_batch_end(batch)
 
 			if is_last_batch or (not batch % int(self._batches_per_epoch // monitor_freq) and batch != 0):
-				self._history.append('batches', batch)
-				with mag.eval(*self._models): self._validate(dataloader['val'])
-				self._history.flush()
+				self._monitor(batch, dataloader['val'], progress_bar=progress_bar)
 
 			try:
 				if not (batch + 1) % self._batches_per_epoch:
@@ -85,6 +88,11 @@ class Trainer:
 
 	def _on_batch_end(self, batch):
 		pass
+
+	def _monitor(self, batch, dataloader, **kwargs):
+		self._history.append('batches', batch)
+		with mag.eval(*self._models): self._validate(dataloader)
+		self._history.flush()
 
 	def _on_epoch_end(self, epoch):
 		pass
@@ -137,6 +145,13 @@ class SupervisedTrainer(Trainer):
 		if isinstance(metrics, str): self._metrics = {metrics: getattr(metrics_module, metrics.lower())}
 		elif isinstance(metrics, (tuple, list)): self._metrics = {m: getattr(metrics_module, m.lower()) for m in metrics}
 		elif isinstance(metrics, dict): self._metrics = metrics
+
+	def _monitor(self, batch, dataloader, **kwargs):
+		super()._monitor(batch, dataloader, **kwargs)
+		progress_bar = kwargs.pop('progress_bar')
+
+		loss = self._history['loss'][-1]; val_loss = self._history['val_loss'][-1]
+		progress_bar.set_description(f'{loss:.2f}, {val_loss:.2f}', refresh=False)
 
 class ClassifierTrainer(SupervisedTrainer):
 	def __init__(self, model, data, optimizer='adam'):
