@@ -95,9 +95,25 @@ class DataLoader(DataLoaderPyTorch):
 
 		return {'indices': sampler.indices, 'pos': sampler.pos}
 
+	def save_state_dict(self, path):
+		import pickle
+		from pathlib import Path
+		with open(Path(path), 'wb') as f: pickle.dump(self.state_dict(), f)
+
 	def load_state_dict(self, state_dict):
+		if not isinstance(state_dict, dict):
+			import pickle
+			from pathlib import Path
+			path = Path(state_dict)
+			if path.exists():
+				with open(path, 'rb') as f: state_dict = pickle.load(f)
+			else: return
+
 		self.sampler.indices = state_dict['indices']
 		self.sampler.pos = state_dict['pos']
+
+	def __next__(self):
+		return next(iter(self))
 
 class Data:
 	def __init__(self, path=None):

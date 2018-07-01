@@ -3,6 +3,9 @@ class History(dict):
 		super().__init__(**kwargs)
 		self.buffer = {}
 
+	def find(self, key):
+		return {k: self[k] for k in self.keys() if key in k}
+
 	def append(self, key, value, validation=False, buffer=False):
 		if validation: key = 'val_' + key
 
@@ -59,7 +62,7 @@ class History(dict):
 
 		value = self.buffer[key]
 		if len(value) == 0: return
-		
+
 		value = sum(value) / len(value) # Mean
 
 		try: self[key].append(value)
