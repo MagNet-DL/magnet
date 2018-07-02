@@ -1,12 +1,17 @@
 import magnet as mag
 
 class Trainer:
-	def __init__(self, models, data, optimizers, save_path=None):
+	def __init__(self, models, data, losses=None, optimizers=['adam'], metrics=None, save_path=None):
+		from magnet.training import metrics as metrics_module
 		from pathlib import Path
+		from torch import optim
 
 		self._models = models
 		self._data = data
+		self._losses = losses
+		if optimizers[0] == 'adam': optimizers = [optim.Adam(model.parameters(), amsgrad=True) for model in models]
 		self._optimizers = optimizers
+		self._metrics = {metrics: getattr(metrics_module, metrics.lower())}
 
 		from magnet.training.history import History
 		self._history = History()
@@ -37,6 +42,7 @@ class Trainer:
 		batch_size_val = kwargs.get('batch_size_val', batch_size)
 		shuffle_val = kwargs.get('shuffle_val', False)
 		cold_start = kwargs.get('cold_start', False) and 'batches' not in self._history.keys()
+		training = kwargs.get('training', True)
 		monitor_finally = kwargs.get('monitor_finally', True)
 
 		if isinstance(self._data, data_module.Data):
@@ -58,11 +64,12 @@ class Trainer:
 		iterations = kwargs.get('iterations', int(epochs * self._batches_per_epoch))
 
 		if cold_start:
-			kwargs.pop('monitor_finally', None); kwargs.pop('iterations', None); kwargs.pop('cold_start', None)
+			kwargs.pop('iterations', None); kwargs.pop('cold_start', None); kwargs.pop('training', None); kwargs.pop('monitor_finally', None)
 			with mag.eval(*self._models):
-				self.train(epochs, batch_size, shuffle, monitor_finally=False, iterations=int(self._batches_per_epoch // monitor_freq), cold_start=False, **kwargs)
+				self.train(epochs, batch_size, shuffle, iterations=int(self._batches_per_epoch // monitor_freq),
+							cold_start=False, training=False, monitor_finally=False, **kwargs)
 
-		try: start_iteration = self._history['batches'][-1]
+		try: start_iteration = self._history['batches'][-1] + 1
 		except KeyError: start_iteration = 0
 
 		progress_bar = tqdm(range(start_iteration, start_iteration + iterations), unit_scale=True,
@@ -86,20 +93,15 @@ class Trainer:
 
 			self._on_batch_start(batch)
 
-			self._optimize(dataloader['train'], batch)
+			self._optimize(dataloader['train'], batch, training)
 
 			self._on_batch_end(batch)
 
 			if (is_last_batch and monitor_finally) or (not batch % int(self._batches_per_epoch // validate_freq) and batch != 0):
 				with mag.eval(*self._models): self._validate(dataloader['val'], validation_batches)
 
-			if (is_last_batch and monitor_finally) or (not batch % int(self._batches_per_epoch // monitor_freq) and batch != 0):
+			if not batch % int(self._batches_per_epoch // monitor_freq) and batch != 0:
 				self._monitor(batch, progress_bar=progress_bar)
-				"""if cold_start:
-					cold_start = False
-					torch.enable_grad()
-					for model, training in zip(self._models, cold_start_model_training):
-						if training: model.train()"""
 
 			try:
 				if not (batch + 1) % self._batches_per_epoch:
@@ -213,18 +215,15 @@ class Trainer:
 		dataloader['val'].save_state_dict(self._save_path / 'dl_val.p')
 
 class SupervisedTrainer(Trainer):
-	def __init__(self, model, data, loss, optimizer='adam', metrics=None, save_path=None):
-		optimizers = [self._get_optimizer(model, optimizer)]
-		self._loss = loss
-		self._set_metrics(metrics)
-		super().__init__([model], data, optimizers, save_path)
+	def __init__(self, model, data, loss=None, optimizer='adam', metrics=None, save_path=None):
+		super().__init__([model], data, [loss], [optimizer], metrics, save_path)
 
-	def _optimize(self, dataloader, batch):
+	def _optimize(self, dataloader, batch, training):
 		model = self._models[0]; optimizer = self._optimizers[0]
 
 		loss = self._get_loss(dataloader)
 
-		if model.training:
+		if training:
 			loss.backward()
 			optimizer.step()
 			optimizer.zero_grad()
@@ -233,7 +232,7 @@ class SupervisedTrainer(Trainer):
 		for _ in range(validation_batches): self._get_loss(dataloader, validation=True)
 
 	def _get_loss(self, dataloader, validation=False):
-		model = self._models[0]; loss_fn = self._loss
+		model = self._models[0]; loss_fn = self._losses[0]
 
 		x, y = next(dataloader)
 		y_pred = model(x)
@@ -245,18 +244,6 @@ class SupervisedTrainer(Trainer):
 			self._history.append(k, self._metrics[k](y_pred, y).item(), validation=validation, buffer=True)
 
 		return loss
-
-	def _get_optimizer(self, model, optimizer):
-		from torch import optim
-
-		if optimizer == 'adam':
-			return optim.Adam(model.parameters(), amsgrad=True)
-
-	def _set_metrics(self, metrics):
-		from magnet.training import metrics as metrics_module
-		if isinstance(metrics, str): self._metrics = {metrics: getattr(metrics_module, metrics.lower())}
-		elif isinstance(metrics, (tuple, list)): self._metrics = {m: getattr(metrics_module, m.lower()) for m in metrics}
-		elif isinstance(metrics, dict): self._metrics = metrics
 
 	def _monitor(self, batch, **kwargs):
 		super()._monitor(batch, **kwargs)
