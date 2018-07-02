@@ -24,17 +24,20 @@ class Trainer:
 		pass
 
 	def train(self, epochs=1, batch_size=1, shuffle=True, **kwargs):
+		import torch
 		from magnet._utils import get_tqdm; tqdm = get_tqdm()
 		from magnet import data as data_module
 		from time import time
 
 		start_time = time()
 
-		save_interval=kwargs.pop('save_interval', '5 m')
-		monitor_freq=kwargs.pop('monitor_freq', 10)
-		validate_freq=kwargs.pop('validate_freq', monitor_freq)
-		batch_size_val=kwargs.pop('batch_size_val', batch_size)
-		shuffle_val=kwargs.pop('shuffle_val', False)
+		save_interval = kwargs.get('save_interval', '5 m')
+		monitor_freq = kwargs.get('monitor_freq', 10)
+		validate_freq = kwargs.get('validate_freq', monitor_freq)
+		batch_size_val = kwargs.get('batch_size_val', batch_size)
+		shuffle_val = kwargs.get('shuffle_val', False)
+		cold_start = kwargs.get('cold_start', False) and 'batches' not in self._history.keys()
+		monitor_finally = kwargs.get('monitor_finally', True)
 
 		if isinstance(self._data, data_module.Data):
 			dataloader = {'train': self._data(batch_size, shuffle)}
@@ -48,11 +51,16 @@ class Trainer:
 			dataloader['train'].load_state_dict(self._save_path / 'dl_train.p')
 			dataloader['val'].load_state_dict(self._save_path / 'dl_val.p')
 
-		validation_batches=kwargs.pop('validation_batches', int(len(dataloader['val']) // validate_freq))
+		validation_batches=kwargs.get('validation_batches', int(len(dataloader['val']) // validate_freq))
 
 		self._batches_per_epoch = len(dataloader['train'])
 
-		iterations = kwargs.pop('iterations', int(epochs * self._batches_per_epoch))
+		iterations = kwargs.get('iterations', int(epochs * self._batches_per_epoch))
+
+		if cold_start:
+			kwargs.pop('monitor_finally', None); kwargs.pop('iterations', None); kwargs.pop('cold_start', None)
+			with mag.eval(*self._models):
+				self.train(epochs, batch_size, shuffle, monitor_finally=False, iterations=int(self._batches_per_epoch // monitor_freq), cold_start=False, **kwargs)
 
 		try: start_iteration = self._history['batches'][-1]
 		except KeyError: start_iteration = 0
@@ -82,11 +90,16 @@ class Trainer:
 
 			self._on_batch_end(batch)
 
-			if is_last_batch or (not batch % int(self._batches_per_epoch // validate_freq) and batch != 0):
+			if (is_last_batch and monitor_finally) or (not batch % int(self._batches_per_epoch // validate_freq) and batch != 0):
 				with mag.eval(*self._models): self._validate(dataloader['val'], validation_batches)
 
-			if is_last_batch or (not batch % int(self._batches_per_epoch // monitor_freq) and batch != 0):
+			if (is_last_batch and monitor_finally) or (not batch % int(self._batches_per_epoch // monitor_freq) and batch != 0):
 				self._monitor(batch, progress_bar=progress_bar)
+				"""if cold_start:
+					cold_start = False
+					torch.enable_grad()
+					for model, training in zip(self._models, cold_start_model_training):
+						if training: model.train()"""
 
 			try:
 				if not (batch + 1) % self._batches_per_epoch:
@@ -180,7 +193,7 @@ class Trainer:
 		for subpath in subpaths: (self._save_path / subpath).mkdir(parents=True, exist_ok=True)
 
 		def _save_module(module, subpath, name_alternative):
-			 name = name_alternative if not hasattr(module, 'name') else optimizer.name
+			name = name_alternative if not hasattr(module, 'name') else optimizer.name
 			filepath = self._save_path / subpath / (name + '.pt')
 			torch.save(module.state_dict(), filepath)
 
@@ -207,13 +220,14 @@ class SupervisedTrainer(Trainer):
 		super().__init__([model], data, optimizers, save_path)
 
 	def _optimize(self, dataloader, batch):
-		optimizer = self._optimizers[0]
+		model = self._models[0]; optimizer = self._optimizers[0]
 
 		loss = self._get_loss(dataloader)
 
-		loss.backward()
-		optimizer.step()
-		optimizer.zero_grad()
+		if model.training:
+			loss.backward()
+			optimizer.step()
+			optimizer.zero_grad()
 
 	def _validate(self, dataloader, validation_batches):
 		for _ in range(validation_batches): self._get_loss(dataloader, validation=True)
