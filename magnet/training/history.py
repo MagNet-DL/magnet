@@ -16,8 +16,10 @@ class History(dict):
 
 		try:
 			self.buffer[key].append(value)
-		except KeyError:
-			self.buffer[key] = [value]
+			if self.buffer_size > 0 and len(self.buffer[key]) > self.buffer_size:
+				self.buffer[key].pop(0)
+
+		except KeyError: self.buffer[key] = [value]
 
 	def show(self, key=None, log=False, x_key=None, xlabel=None):
 		from matplotlib import pyplot as plt
@@ -67,4 +69,5 @@ class History(dict):
 
 		try: self[key].append(value)
 		except KeyError: self[key] = [value]
-		finally: self.buffer[key] = []
+		finally:
+			if self.buffer_size < 0: self.buffer[key] = []

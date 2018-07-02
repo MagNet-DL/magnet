@@ -3,6 +3,7 @@ import magnet as mag
 class Trainer:
 	def __init__(self, models, data, losses=None, optimizers=['adam'], metrics=None, save_path=None):
 		from magnet.training import metrics as metrics_module
+		from magnet.training.history import History
 		from pathlib import Path
 		from torch import optim
 
@@ -13,7 +14,6 @@ class Trainer:
 		self._optimizers = optimizers
 		self._metrics = {metrics: getattr(metrics_module, metrics.lower())} if metrics is not None else {}
 
-		from magnet.training.history import History
 		self._history = History()
 
 		self._save_path = save_path
@@ -72,6 +72,7 @@ class Trainer:
 		self._batches_per_epoch = len(dataloader['train'])
 
 		iterations = kwargs.get('iterations', int(epochs * self._batches_per_epoch))
+		self._history.buffer_size = kwargs.get('buffer_size', self._batches_per_epoch)
 
 		if cold_start:
 			kwargs.pop('iterations', None); kwargs.pop('cold_start', None); kwargs.pop('training', None); kwargs.pop('monitor_finally', None)
