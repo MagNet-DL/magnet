@@ -70,8 +70,8 @@ class OmniSampler(Sampler):
 			self.indices = list(range(self.sample_space))
 		elif isinstance(self.sample_space, float):
 			self.indices = list(range(int(self.sample_space * len(self))))
-		
-		if self.shuffle: 
+
+		if self.shuffle:
 			self.indices = np.random.choice(self.indices, len(self),
 											self.replace, self.probabilities)
 		self.pos = pos
@@ -79,9 +79,9 @@ class OmniSampler(Sampler):
 	def __next__(self):
 		self.pos += 1
 		if self.pos >= len(self.indices): self._begin(0)
-			
+
 		return self.indices[self.pos]
-		
+
 	def __iter__(self):
 		return self
 
@@ -111,6 +111,9 @@ class DataLoader(DataLoaderPyTorch):
 
 		self.sampler.indices = state_dict['indices']
 		self.sampler.pos = state_dict['pos']
+
+	def compatible_with(self, dataloader):
+		return self.batch_size == dataloader.batch_size and self.sampler.shuffle == dataloader.sampler.shuffle and self.sampler.replace == dataloader.sampler.replace
 
 	def __next__(self):
 		return next(iter(self))
@@ -190,7 +193,7 @@ class Data:
 		self['train'] = Subset(self['train'], train_ids)
 
 	def __call__(self, batch_size=1, shuffle=False, replace=False, probabilities=None, sample_space=None, mode='train'):
-		dataset = TransformedDataset(self._dataset[mode], self._transforms) 
+		dataset = TransformedDataset(self._dataset[mode], self._transforms)
 		sampler = OmniSampler(dataset, shuffle, replace, probabilities, sample_space)
 		shuffle = False
 		batch_sampler = None

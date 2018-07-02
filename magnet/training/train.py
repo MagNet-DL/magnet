@@ -57,6 +57,16 @@ class Trainer:
 			dataloader['train'].load_state_dict(self._save_path / 'dl_train.p')
 			dataloader['val'].load_state_dict(self._save_path / 'dl_val.p')
 
+		for k, v in dataloader.items():
+			if hasattr(self, '_dataloader'):
+				if v.compatible_with(self._dataloader[k]):
+					dataloader[k] = self._dataloader[k]
+				else:
+					self._dataloader[k] = v
+			else:
+				self._dataloader = dataloader
+				break
+
 		validation_batches=kwargs.get('validation_batches', int(len(dataloader['val']) // validate_freq))
 
 		self._batches_per_epoch = len(dataloader['train'])
