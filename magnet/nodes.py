@@ -55,7 +55,7 @@ class Node(nn.Module):
 
         for name, val in zip(self._args_order, args['args']): args[name] = val
         args.pop('args')
-        
+
         args.update(args['kwargs'])
         args.pop('kwargs')
 
@@ -89,12 +89,6 @@ class Node(nn.Module):
         self.device = next(self.parameters())[0].device
         return self
 
-    def load_state_dict(self, f):
-        device = mag.device.type
-        if device == 'cuda': device = 'cuda:0'
-        
-        super().load_state_dict(torch.load(f, map_location=device))
-
 class MonoNode(Node):
     configuration = {'act': 'relu'}
 
@@ -106,7 +100,7 @@ class MonoNode(Node):
         layer_class = self._find_layer(x)
         kwargs = self._get_kwargs()
         self._layer = layer_class(**kwargs)
-        
+
         super().build(x)
 
     def forward(self, x):
@@ -153,7 +147,7 @@ class Conv(MonoNode):
     def _kwargs_dict(self):
         return {'kernel_size': 'k', 'out_channels': 'c', 'stride': 's',
                 'padding': 'p', 'dilation': 'd', 'groups': 'g', 'bias': 'b', 'in_channels': 'ic'}
-    
+
     def _set_padding(self, x):
         in_shape = x.shape
 
@@ -165,11 +159,11 @@ class Conv(MonoNode):
             self.configuration['c'] = in_shape[1] // 2
             f = 1
         else: return
-        
+
         s = 1 / f
-        if not s.is_integer(): 
+        if not s.is_integer():
             raise RuntimeError("Padding value won't hold for all vector sizes")
-            
+
         self.configuration['d'] = 1
         self.configuration['s'] = int(s)
         self.configuration['p'] = int(self.configuration['k'] // 2)

@@ -147,25 +147,30 @@ class Trainer:
 		if self._save_path is None: return
 		import torch, pickle
 
-		for i, model in enumerate(self._models):
-			name = str(i) if not hasattr(model, 'name') else model.name
-			filepath = self._save_path / 'models' / (name + '.pt')
-			if filepath.exists(): model.load_state_dict(filepath)
+		def _load_module(module, subpath, name_alternative):
+			device = module.device.type
+			if device == 'cuda': device = 'cuda:0'
 
-		for i, optimizer in enumerate(self._optimizers):
-			name = str(i) if not hasattr(optimizer, 'name') else optimizer.name
-			filepath = self._save_path / 'optimizers' / (name + '.pt')
-			if filepath.exists(): optimizer.load_state_dict(torch.load(filepath))
+			name = name_alternative if not hasattr(module, 'name') else optimizer.name
+			filepath = self._save_path / subpath / (name + '.pt')
+			if filepath.exists(): module.load_state_dict(torch.load(filepath, map_location=device))
 
-		filepath = self._save_path / 'history.p'
-		if filepath.exists():
-			with open(filepath, 'rb') as f: self._history = pickle.load(f)
+		def _load_obj(name, default):
+			filepath = self._save_path / (name + '.p')
+			if filepath.exists():
+				with open(filepath, 'rb') as f: return pickle.load(f)
+			else:
+				return None
 
-		filepath = self._save_path / 'state.p'
-		if filepath.exists():
-			with open(filepath, 'rb') as f: state_dict = pickle.load(f)
-		else: state_dict = {}
-		for attr, val in state_dict.items(): setattr(self, attr, val) 
+		for i, model in enumerate(self._models): _load_module(model, 'models', str(i))
+
+		for i, optimizer in enumerate(self._optimizers): _load_module(optimizer, 'optimizers', str(i))
+
+		history = _load_obj('history')
+		if history is not None: self._history = history
+
+		state_dict = _load_obj('state', {})
+		for attr, val in state_dict.items(): setattr(self, attr, val)
 
 	def _save(self, dataloader):
 		if self._save_path is None: return
@@ -174,18 +179,22 @@ class Trainer:
 		subpaths = ['models', 'optimizers']
 		for subpath in subpaths: (self._save_path / subpath).mkdir(parents=True, exist_ok=True)
 
-		for i, model in enumerate(self._models):
-			name = str(i) if not hasattr(model, 'name') else model.name
-			torch.save(model.state_dict(), self._save_path / 'models' / (name + '.pt'))
+		def _save_module(module, subpath, name_alternative):
+			 name = name_alternative if not hasattr(module, 'name') else optimizer.name
+			filepath = self._save_path / subpath / (name + '.pt')
+			torch.save(module.state_dict(), filepath)
 
-		for i, optimizer in enumerate(self._optimizers):
-			name = str(i) if not hasattr(optimizer, 'name') else optimizer.name
-			torch.save(optimizer.state_dict(), self._save_path / 'optimizers' / (name + '.pt'))
+		def _save_obj(object, name):
+			with open(self._save_path / (name + '.p'), 'wb') as f: pickle.dump(obj, f)
 
-		with open(self._save_path / 'history.p', 'wb') as f: pickle.dump(self._history, f)
+		for i, model in enumerate(self._models): _save_module(model, 'models', str(i))
+
+		for i, optimizer in enumerate(self._optimizers): _save_module(optimizer, 'optimizers', str(i))
+
+		_save_obj(self._history, 'history')
 
 		state_dict = {attr: getattr(self, attr) for attr in ('_batches_per_epoch', )}
-		with open(self._save_path / 'state.p', 'wb') as f: pickle.dump(state_dict, f)
+		_save_obj(state_dict, 'state')
 
 		dataloader['train'].save_state_dict(self._save_path / 'dl_train.p')
 		dataloader['val'].save_state_dict(self._save_path / 'dl_val.p')
@@ -239,11 +248,11 @@ class SupervisedTrainer(Trainer):
 		super()._monitor(batch, **kwargs)
 		progress_bar = kwargs.pop('progress_bar')
 
-		loss = self._history['loss'][-1]; 
-		try: 
+		loss = self._history['loss'][-1];
+		try:
 			val_loss = self._history['val_loss'][-1]
 			progress_bar.set_description(f'{loss:.2f}, {val_loss:.2f}', refresh=False)
-		except KeyError: 
+		except KeyError:
 			progress_bar.set_description(f'{loss:.2f}', refresh=False)
 
 class ClassifierTrainer(SupervisedTrainer):
