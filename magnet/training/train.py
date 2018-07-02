@@ -11,7 +11,7 @@ class Trainer:
 		self._losses = losses
 		if optimizers[0] == 'adam': optimizers = [optim.Adam(model.parameters(), amsgrad=True) for model in models]
 		self._optimizers = optimizers
-		self._metrics = {metrics: getattr(metrics_module, metrics.lower())}
+		self._metrics = {metrics: getattr(metrics_module, metrics.lower())} if metrics is not None else {}
 
 		from magnet.training.history import History
 		self._history = History()

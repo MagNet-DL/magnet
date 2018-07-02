@@ -86,7 +86,9 @@ class Node(nn.Module):
 
     def to(self, *args, **kwargs):
         super().to(*args, **kwargs)
-        self.device = next(self.parameters())[0].device
+
+        try: self.device = next(self.parameters())[0].device
+        except StopIteration: pass
         return self
 
 class MonoNode(Node):
