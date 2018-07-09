@@ -13,7 +13,7 @@ class Module(nn.Module):
 	def to(self, *args, **kwargs):
 		super().to(*args, **kwargs)
 		try: self.device = next(self.parameters())[0].device
-		except: pass
+		except StopIteration: pass
 		return self
 
 	def load_state_dict(self, f):
@@ -104,12 +104,12 @@ class MonoNode(Node):
 		super().__init__(*args, **kwargs)
 		self._set_activation()
 
-	def build(self, x):
-		layer_class = self._find_layer(x)
-		kwargs = self._get_kwargs()
-		self._layer = layer_class(**kwargs)
+    def build(self, x):
+        layer_class = self._find_layer(x)
+        kwargs = self._get_kwargs()
+        self._layer = layer_class(**kwargs)
 
-		super().build(x)
+        super().build(x)
 
 	def forward(self, x):
 		super().forward(x)
@@ -133,64 +133,64 @@ class MonoNode(Node):
 		self._activation = activation_dict[self.configuration['act']]
 
 class Conv(MonoNode):
-	configuration = {'c': None, 'k': 3, 'p': 'half', 's': 1, 'd': 1, 'g': 1, 'b': True, 'ic': None, 'dims': None}
-	configuration.update(MonoNode.configuration)
+    configuration = {'c': None, 'k': 3, 'p': 'half', 's': 1, 'd': 1, 'g': 1, 'b': True, 'ic': None, 'dims': None}
+    configuration.update(MonoNode.configuration)
 
-	def build(self, x):
-		self._set_padding(x)
-		self.configuration['ic'] = x.shape[1]
-		super().build(x)
+    def build(self, x):
+        self._set_padding(x)
+        self.configuration['ic'] = x.shape[1]
+        super().build(x)
 
-	def forward(self, x):
-		if hasattr(self, '_upsample'): x = F.upsample(x, scale_factor=self._upsample)
-		return super().forward(x)
+    def forward(self, x):
+        if hasattr(self, '_upsample'): x = F.upsample(x, scale_factor=self._upsample)
+        return super().forward(x)
 
-	def _find_layer(self, x):
-		shape_dict = [nn.Conv1d, nn.Conv2d, nn.Conv3d]
-		ndim = len(x.shape) - 2
-		self.configuration['dims'] = ndim
-		return shape_dict[ndim - 1]
+    def _find_layer(self, x):
+        shape_dict = [nn.Conv1d, nn.Conv2d, nn.Conv3d]
+        ndim = len(x.shape) - 2
+        self.configuration['dims'] = ndim
+        return shape_dict[ndim - 1]
 
-	@property
-	def _kwargs_dict(self):
-		return {'kernel_size': 'k', 'out_channels': 'c', 'stride': 's',
-				'padding': 'p', 'dilation': 'd', 'groups': 'g', 'bias': 'b', 'in_channels': 'ic'}
+    @property
+    def _kwargs_dict(self):
+        return {'kernel_size': 'k', 'out_channels': 'c', 'stride': 's',
+                'padding': 'p', 'dilation': 'd', 'groups': 'g', 'bias': 'b', 'in_channels': 'ic'}
 
-	def _set_padding(self, x):
-		in_shape = x.shape
+    def _set_padding(self, x):
+        in_shape = x.shape
 
-		p = self.configuration['p']
-		if p == 'half': f = 0.5
-		elif p == 'same': f = 1
-		elif p == 'double':
-			self._upsample = 2
-			self.configuration['c'] = in_shape[1] // 2
-			f = 1
-		else: return
+        p = self.configuration['p']
+        if p == 'half': f = 0.5
+        elif p == 'same': f = 1
+        elif p == 'double':
+            self._upsample = 2
+            self.configuration['c'] = in_shape[1] // 2
+            f = 1
+        else: return
 
-		s = 1 / f
-		if not s.is_integer():
-			raise RuntimeError("Padding value won't hold for all vector sizes")
+        s = 1 / f
+        if not s.is_integer():
+            raise RuntimeError("Padding value won't hold for all vector sizes")
 
-		self.configuration['d'] = 1
-		self.configuration['s'] = int(s)
-		self.configuration['p'] = int(self.configuration['k'] // 2)
-		if self.configuration['c'] is None:
-			self.configuration['c'] = self.configuration['s'] * in_shape[1]
+        self.configuration['d'] = 1
+        self.configuration['s'] = int(s)
+        self.configuration['p'] = int(self.configuration['k'] // 2)
+        if self.configuration['c'] is None:
+            self.configuration['c'] = self.configuration['s'] * in_shape[1]
 
-	@property
-	def _args_order(self):
-		return ['c', 'k', 'p', 's', 'd', 'g', 'b', 'ic', 'dims']
+    @property
+    def _args_order(self):
+        return ['c', 'k', 'p', 's', 'd', 'g', 'b', 'ic', 'dims']
 
-	def  _mul_list(self, n):
-		convs = [self]
-		self.configuration['c'] = n[0]
-		kwargs = self._args.copy()
-		for c in n[1:]:
-			kwargs['c'] = c
-			convs.append(self.__class__(**kwargs))
+    def  _mul_list(self, n):
+        convs = [self]
+        self.configuration['c'] = n[0]
+        kwargs = self._args.copy()
+        for c in n[1:]:
+            kwargs['c'] = c
+            convs.append(self.__class__(**kwargs))
 
-		return convs
+        return convs
 
 class Linear(MonoNode):
 	configuration = {'o': None, 'b': True, 'act': 'relu', 'flat': True, 'i': None}

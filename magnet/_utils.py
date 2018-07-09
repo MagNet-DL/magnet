@@ -65,3 +65,15 @@ def get_function_name(fn):
 
     name = src.split('def ')
     if len(name) > 1: return name[1].split('(')[0].strip()
+
+def get_tqdm():
+    """
+    :return: Returns a flexible tqdm object according to the environment of execution.
+    """
+    import tqdm
+
+    try:
+        get_ipython()
+        return getattr(tqdm, 'tqdm_notebook')
+    except:
+        return getattr(tqdm, 'tqdm')

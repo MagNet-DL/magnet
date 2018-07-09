@@ -2,9 +2,8 @@ import numpy as np
 
 from torch.utils.data.dataloader import DataLoader as DataLoaderPyTorch
 from torch.utils.data.dataloader import default_collate
-from torch.utils.data import Dataset
+from torch.utils.data import Dataset as DatasetPyTorch
 from torch.utils.data.sampler import Sampler
-from torchvision import transforms
 
 def _get_data_dir():
 	import os
@@ -19,14 +18,17 @@ def _get_data_dir():
 
 DIR_DATA = _get_data_dir()
 
-class TransformedDataset(Dataset):
-	def __init__(self, dataset, transforms=None):
+class Dataset(DatasetPyTorch):
+	def __init__(self, dataset, transforms=None, get_fn=None):
 		self.dataset = dataset
 		self.transforms = transforms
+		self.get_fn = get_fn
 
 	def __getitem__(self, index):
 		x = list(self.dataset[index])
-		return self._apply_transforms(x)
+		x = self._apply_transforms(x)
+		if self.get_fn is not None: x = self.get_fn(x)
+		return x
 
 	def __len__(self):
 		return len(self.dataset)
@@ -70,8 +72,8 @@ class OmniSampler(Sampler):
 			self.indices = list(range(self.sample_space))
 		elif isinstance(self.sample_space, float):
 			self.indices = list(range(int(self.sample_space * len(self))))
-		
-		if self.shuffle: 
+
+		if self.shuffle:
 			self.indices = np.random.choice(self.indices, len(self),
 											self.replace, self.probabilities)
 		self.pos = pos
@@ -79,9 +81,9 @@ class OmniSampler(Sampler):
 	def __next__(self):
 		self.pos += 1
 		if self.pos >= len(self.indices): self._begin(0)
-			
+
 		return self.indices[self.pos]
-		
+
 	def __iter__(self):
 		return self
 
@@ -95,29 +97,47 @@ class DataLoader(DataLoaderPyTorch):
 
 		return {'indices': sampler.indices, 'pos': sampler.pos}
 
+	def save_state_dict(self, path):
+		import pickle
+		from pathlib import Path
+		with open(Path(path), 'wb') as f: pickle.dump(self.state_dict(), f)
+
 	def load_state_dict(self, state_dict):
+		if not isinstance(state_dict, dict):
+			import pickle
+			from pathlib import Path
+			path = Path(state_dict)
+			if path.exists():
+				with open(path, 'rb') as f: state_dict = pickle.load(f)
+			else: return
+
 		self.sampler.indices = state_dict['indices']
 		self.sampler.pos = state_dict['pos']
 
+	def compatible_with(self, dataloader):
+		return self.batch_size == dataloader.batch_size and self.sampler.shuffle == dataloader.sampler.shuffle and self.sampler.replace == dataloader.sampler.replace
+
+	def __next__(self):
+		return next(iter(self))
+
 class Data:
-	def __init__(self, path=None):
+	def __init__(self, path=None, **kwargs):
 		if not hasattr(self, '_name'): self._name = self.__class__.__name__
 
 		if path is None: path = DIR_DATA
 		self._path = path / self._name
 		self._path.mkdir(parents=True, exist_ok=True)
-		self.set_defaults()
+		self._num_workers = kwargs.pop('num_workers', 0)
+		self._collate_fn = kwargs.pop('collate_fn', default_collate)
+		self._pin_memory = kwargs.pop('pin_memory', False)
+		self._timeout = kwargs.pop('timeout', 0)
+		self._worker_init_fn = kwargs.pop('worker_init_fn', None)
+		self._transforms = kwargs.pop('transforms', None)
+		self._get_fn = kwargs.pop('get_fn', None)
 
 		self._download()
 		self._preprocess()
 
-	def set_defaults(self, num_workers=0, collate_fn=default_collate, pin_memory=False, timeout=0, worker_init_fn=None, transforms=transforms.ToTensor()):
-		self._num_workers = num_workers
-		self._collate_fn = collate_fn
-		self._pin_memory = pin_memory
-		self._timeout = timeout
-		self._worker_init_fn = worker_init_fn
-		self._transforms = transforms
 
 	def _is_downloaded(self):
 		return True
@@ -174,7 +194,7 @@ class Data:
 		self['train'] = Subset(self['train'], train_ids)
 
 	def __call__(self, batch_size=1, shuffle=False, replace=False, probabilities=None, sample_space=None, mode='train'):
-		dataset = TransformedDataset(self._dataset[mode], self._transforms) 
+		dataset = Dataset(self._dataset[mode], self._transforms, self._get_fn)
 		sampler = OmniSampler(dataset, shuffle, replace, probabilities, sample_space)
 		shuffle = False
 		batch_sampler = None
@@ -190,10 +210,12 @@ class Data:
 							collate_fn, pin_memory, drop_last, timeout, worker_init_fn)
 
 class MNIST(Data):
-	def __init__(self, val_split=0.2, path=None):
+	def __init__(self, val_split=0.2, path=None, **kwargs):
 		from torchvision.datasets import mnist
+		from torchvision import transforms
 
-		super().__init__(path)
+		transforms = kwargs.pop('transforms', transforms.Compose([transforms.ToTensor(), transforms.Normalize(*[[0.5] * 3] * 2)]))
+		super().__init__(path, transforms=transforms, **kwargs)
 
 		self._dataset = {mode: mnist.MNIST(self._path, train=(mode == 'train'), download=True)
 						for mode in ('train', 'test')}
