@@ -41,7 +41,7 @@ class Trainer:
 		validate_freq = kwargs.get('validate_freq', monitor_freq)
 		batch_size_val = kwargs.get('batch_size_val', batch_size)
 		shuffle_val = kwargs.get('shuffle_val', False)
-		cold_start = kwargs.get('cold_start', False) and 'batches' not in self._history.keys()
+		cold_start = kwargs.get('cold_start', False) and not hasattr(self, '_iterations')
 		training = kwargs.get('training', True)
 		monitor_finally = kwargs.get('monitor_finally', True)
 
@@ -72,17 +72,18 @@ class Trainer:
 		self._batches_per_epoch = len(dataloader['train'])
 
 		iterations = kwargs.get('iterations', int(epochs * self._batches_per_epoch))
+
+		if cold_start:
+			_kwargs = {k: v for k, v in kwargs.items() if k not in ('iterations', 'cold_start', 'training', 'monitor_finally')}
+			with mag.eval(*self._models):
+				self.train(epochs, batch_size, shuffle, iterations=int(self._batches_per_epoch // monitor_freq) + 1,
+							cold_start=False, training=False, monitor_finally=False, **_kwargs)
+
 		self._history.buffer_size = kwargs.get('buffer_size', self._batches_per_epoch)
 		self._history.val_buffer_size = kwargs.get('val_buffer_size', len(dataloader['val']))
 
-		if cold_start:
-			kwargs.pop('iterations', None); kwargs.pop('cold_start', None); kwargs.pop('training', None); kwargs.pop('monitor_finally', None)
-			with mag.eval(*self._models):
-				self.train(epochs, batch_size, shuffle, iterations=int(self._batches_per_epoch // monitor_freq),
-							cold_start=False, training=False, monitor_finally=False, **kwargs)
-
-		try: start_iteration = self._history['batches'][-1] + 1
-		except KeyError: start_iteration = 0
+		try: start_iteration = self._iterations + 1
+		except AttributeError: start_iteration = self._iterations = 0
 
 		progress_bar = tqdm(range(start_iteration, start_iteration + iterations), unit_scale=True,
 							unit_divisor=self._batches_per_epoch, leave=False)
@@ -130,10 +131,9 @@ class Trainer:
 		xlabel = None
 
 		if vs is None:
-			vs = 'epochs' if self._history['batches'][-1] > self._batches_per_epoch else 'batches'
+			vs = 'epochs' if self._iterations > self._batches_per_epoch else 'batches'
 		vs = vs.lower()
 		if vs == 'epochs':
-			vs = [b / self._batches_per_epoch for b in self._history['batches']]
 			xlabel = 'epochs'
 		elif vs in ('batches', 'iterations'):
 			vs = 'batches'
@@ -161,8 +161,8 @@ class Trainer:
 		pass
 
 	def _monitor(self, batch, **kwargs):
-		self._history.append('batches', batch)
-		self._history.flush(batches=batch)
+		self._iterations = batch
+		self._history.flush(batches=batch, epochs=batch / self._batches_per_epoch)
 
 	def _on_epoch_end(self, epoch):
 		pass
@@ -220,7 +220,7 @@ class Trainer:
 
 		_save_obj(self._history, 'history')
 
-		state_dict = {attr: getattr(self, attr) for attr in ('_batches_per_epoch', )}
+		state_dict = {attr: getattr(self, attr) for attr in ('_batches_per_epoch', 'iterations')}
 		_save_obj(state_dict, 'state')
 
 		dataloader['train'].save_state_dict(self._save_path / 'dl_train.p')

@@ -74,8 +74,9 @@ class SnapShot:
 
 		if self._buffer_size < 0: self._buffer._clear()
 
-	def _retrieve(self, key='val'):
-		return [snap[key] for snap in self._snaps]
+	def _retrieve(self, key='val', stamp=None):
+		if stamp is None: return [snap[key] for snap in self._snaps]
+		return list(zip(*[(snap[stamp], snap[key]) for snap in self._snaps if stamp in snap.keys()]))
 
 	def _pop(self, index):
 		self._snaps.pop(index)
@@ -90,13 +91,12 @@ class SnapShot:
 		return self._snaps[index]['val']
 
 	def show(self, ax, x=None, label=None):
-		if x is None: x = list(range(len(self)))
-		else: x = self._retrieve(x)
+		if x is None:
+			x = list(range(len(self)))
+			y = self._retrieve()
+		else:
+			x, y = self._retrieve(stamp=x)
 
-		y = self._retrieve()
-
-		if len(x) != len(y): print('Lengths are not the same! Got', len(x), 'and', len(y))
-
-		ax.plot(x, y, label=label)
+		if len(x) != 0: ax.plot(x, y, label=label)
 
 
