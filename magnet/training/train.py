@@ -73,6 +73,7 @@ class Trainer:
 
 		iterations = kwargs.get('iterations', int(epochs * self._batches_per_epoch))
 		self._history.buffer_size = kwargs.get('buffer_size', self._batches_per_epoch)
+		self._history.val_buffer_size = kwargs.get('val_buffer_size', len(dataloader['val']))
 
 		if cold_start:
 			kwargs.pop('iterations', None); kwargs.pop('cold_start', None); kwargs.pop('training', None); kwargs.pop('monitor_finally', None)
@@ -161,7 +162,7 @@ class Trainer:
 
 	def _monitor(self, batch, **kwargs):
 		self._history.append('batches', batch)
-		self._history.flush()
+		self._history.flush(batches=batch)
 
 	def _on_epoch_end(self, epoch):
 		pass
