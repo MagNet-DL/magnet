@@ -152,17 +152,13 @@ class Linear(Node):
         from numpy import prod
         self._args['i'] = prod(x.shape[1:]) if self._args['flat'] else x.shape[-1]
 
-        layer_class = self._find_layer(x)
-        self._layer = layer_class(in_features=self._args['i'], out_features=self._args['o'], bias=self._args['b'])
+        self._layer = nn.Linear(*[self._args[k] for k in ('i', 'o', 'b')])
         super().build(x)
 
     def forward(self, x):
         if self._args['flat']: x = x.view(x.size(0), -1)
 
         return self._activation(self._layer(x))
-
-    def _find_layer(self, x):
-        return nn.Linear
 
     def _set_activation(self):
         from functools import partial
@@ -185,7 +181,7 @@ class Lambda(Node):
     def __init__(self, fn):
         super().__init__(fn)
 
-        self.name = get_function_name(self.configuration['fn'])
+        self.name = get_function_name(self._args['fn'])
         if self.name is None: self.name = 'Lambda'
 
     def forward(self, x):
