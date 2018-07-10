@@ -13,11 +13,15 @@ class Node(nn.Module):
         self._built = False
 
     def build(self, *args, **kwargs):
+        if self._built and mag.build_lock: return
+
+        [c.build(*args, **kwargs) for c in self.modules() if isinstance(c, Node) and c != self]
+
         self._built = True
         self.to(mag.device)
 
     def __call__(self, *args, **kwargs):
-        if not (self._built and mag.build_lock): self.build(*args, **kwargs)
+        self.build(*args, **kwargs)
         return super().__call__(*args, **kwargs)
 
     def _check_parameters(self, return_val):
@@ -73,25 +77,41 @@ class Node(nn.Module):
         if type(n) is tuple or type(n) is list:
             return self._mul_list(n)
 
+    def _get_name(self):
+        return self.name
+
+class Lambda(Node):
+    def __init__(self, fn, **kwargs):
+        super().__init__(fn, **kwargs)
+
+        if self.name == self.__class__.__name__:
+            self.name = get_function_name(self._args['fn'])
+        if self.name is None:
+            self.name = self.__class__.__name__
+
+    def forward(self, x):
+        return self._args['fn'](x)
+
 class Conv(Node):
-    def __init__(self, c=None, k=3, p='half', s=1, d=1, g=1, b=True, ic=None, act='relu'):
-        super().__init__(c, k, p, s, d, g, b, ic, act)
+    def __init__(self, c=None, k=3, p='half', s=1, d=1, g=1, b=True, ic=None, act='relu', **kwargs):
+        super().__init__(c, k, p, s, d, g, b, ic, act, **kwargs)
 
     def build(self, x):
         from magnet.functional import activation_wiki
-        self._activation = activation_wiki[self._args['act']]
         self._set_padding(x)
         self._args['ic'] = x.shape[1]
 
         layer_class = self._find_layer(x)
-        self._layer = layer_class(kernel_size=self._args['k'], out_channels=self._args['c'],
-                                    stride=self._args['s'], padding=self._args['p'], dilation=self._args['d'],
-                                    groups=self._args['g'], bias=self._args['b'], in_channels=self._args['ic'])
+        layers = [layer_class(kernel_size=self._args['k'], out_channels=self._args['c'],
+                                stride=self._args['s'], padding=self._args['p'], dilation=self._args['d'],
+                                groups=self._args['g'], bias=self._args['b'], in_channels=self._args['ic']),
+                    Lambda(activation_wiki[self._args['act']], name='Activation')]
+        if hasattr(self, '_upsample'): layers.insert(0, Lambda(lambda x: F.upsample(x, scale_factor=self._upsample), name='Upsample'))
+        self._layer = nn.Sequential(*layers)
         super().build(x)
 
     def forward(self, x):
-        if hasattr(self, '_upsample'): x = F.upsample(x, scale_factor=self._upsample)
-        return self._activation(self._layer(x))
+        return self._layer(x)
 
     def _find_layer(self, x):
         shape_dict = [nn.Conv1d, nn.Conv2d, nn.Conv3d]
@@ -133,23 +153,24 @@ class Conv(Node):
         return convs
 
 class Linear(Node):
-    def __init__(self, o=None, b=True, flat=True, i=None, act='relu'):
-        super().__init__(o, b, flat, i, act)
+    def __init__(self, o=None, b=True, flat=True, i=None, act='relu', **kwargs):
+        super().__init__(o, b, flat, i, act, **kwargs)
 
     def build(self, x):
         from numpy import prod
         from magnet.functional import activation_wiki
 
-        self._activation = activation_wiki[self._args['act']]
         self._args['i'] = prod(x.shape[1:]) if self._args['flat'] else x.shape[-1]
 
-        self._layer = nn.Linear(*[self._args[k] for k in ('i', 'o', 'b')])
+        layers = [nn.Linear(*[self._args[k] for k in ('i', 'o', 'b')]),
+                    Lambda(activation_wiki[self._args['act']], name='Activation')]
+        if self._args['flat']: layers.insert(0, Lambda(lambda x: x.view(x.size(0), -1), name='Flatten'))
+
+        self._layer = nn.Sequential(*layers)
         super().build(x)
 
     def forward(self, x):
-        if self._args['flat']: x = x.view(x.size(0), -1)
-
-        return self._activation(self._layer(x))
+        return self._layer(x)
 
     def  _mul_list(self, n):
         lins = [self]
@@ -160,13 +181,3 @@ class Linear(Node):
             lins.append(self.__class__(**kwargs))
 
         return lins
-
-class Lambda(Node):
-    def __init__(self, fn):
-        super().__init__(fn)
-
-        self.name = get_function_name(self._args['fn'])
-        if self.name is None: self.name = 'Lambda'
-
-    def forward(self, x):
-        return self._args['fn'](x)

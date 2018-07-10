@@ -3,7 +3,7 @@ import magnet as mag
 
 from torch import nn
 
-from .nodes import Node, Module
+from .nodes import Node
 
 class MonoSequential(nn.Sequential):
 	def __init__(self, node, *args, **kwargs):
