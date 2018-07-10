@@ -76,9 +76,10 @@ class Node(nn.Module):
 class Conv(Node):
     def __init__(self, c=None, k=3, p='half', s=1, d=1, g=1, b=True, ic=None, act='relu'):
         super().__init__(c, k, p, s, d, g, b, ic, act)
-        self._set_activation()
 
     def build(self, x):
+        from magnet.functional import activation_wiki
+        self._activation = activation_wiki[self._args['act']]
         self._set_padding(x)
         self._args['ic'] = x.shape[1]
 
@@ -96,13 +97,6 @@ class Conv(Node):
         shape_dict = [nn.Conv1d, nn.Conv2d, nn.Conv3d]
         ndim = len(x.shape) - 2
         return shape_dict[ndim - 1]
-
-    def _set_activation(self):
-        from functools import partial
-
-        activation_dict = {'relu': F.relu, 'sigmoid': F.sigmoid, 'tanh': F.tanh,
-                            'lrelu': partial(F.leaky_relu, leak=0.2), None: lambda x: x}
-        self._activation = activation_dict[self._args['act']]
 
     def _set_padding(self, x):
         in_shape = x.shape
@@ -141,10 +135,12 @@ class Conv(Node):
 class Linear(Node):
     def __init__(self, o=None, b=True, flat=True, i=None, act='relu'):
         super().__init__(o, b, flat, i, act)
-        self._set_activation()
 
     def build(self, x):
         from numpy import prod
+        from magnet.functional import activation_wiki
+
+        self._activation = activation_wiki[self._args['act']]
         self._args['i'] = prod(x.shape[1:]) if self._args['flat'] else x.shape[-1]
 
         self._layer = nn.Linear(*[self._args[k] for k in ('i', 'o', 'b')])
@@ -154,13 +150,6 @@ class Linear(Node):
         if self._args['flat']: x = x.view(x.size(0), -1)
 
         return self._activation(self._layer(x))
-
-    def _set_activation(self):
-        from functools import partial
-
-        activation_dict = {'relu': F.relu, 'sigmoid': F.sigmoid, 'tanh': F.tanh,
-                            'lrelu': partial(F.leaky_relu, leak=0.2), None: lambda x: x}
-        self._activation = activation_dict[self._args['act']]
 
     def  _mul_list(self, n):
         lins = [self]
