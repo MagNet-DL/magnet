@@ -17,10 +17,14 @@ class Module(nn.Module):
         return self
 
     def load_state_dict(self, f):
-        device = self.device.type
-        if device == 'cuda': device = 'cuda:0'
+        from pathlib import Path
+        if isinstance(f, (str, Path)):
+            device = self.device.type
+            if device == 'cuda': device = 'cuda:0'
 
-        super().load_state_dict(torch.load(f, map_location=device))
+            return super().load_state_dict(torch.load(f, map_location=device))
+        else:
+            return super().load_state_dict(f)
 
 class Node(Module):
     def __init__(self, *args, **kwargs):
