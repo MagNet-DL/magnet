@@ -6,27 +6,7 @@ from torch.nn import functional as F
 
 from magnet._utils import caller_locals, get_function_name
 
-class Module(nn.Module):
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-
-    def to(self, *args, **kwargs):
-        super().to(*args, **kwargs)
-        try: self.device = next(self.parameters())[0].device
-        except StopIteration: pass
-        return self
-
-    def load_state_dict(self, f):
-        from pathlib import Path
-        if isinstance(f, (str, Path)):
-            device = self.device.type
-            if device == 'cuda': device = 'cuda:0'
-
-            return super().load_state_dict(torch.load(f, map_location=device))
-        else:
-            return super().load_state_dict(f)
-
-class Node(Module):
+class Node(nn.Module):
     def __init__(self, *args, **kwargs):
         super().__init__()
         self._parse_args()
@@ -64,6 +44,22 @@ class Node(Module):
     def get_args(self):
         return ', '.join(str(k) + '=' + str(v) for k, v in self._args.items())
 
+    def to(self, *args, **kwargs):
+        super().to(*args, **kwargs)
+        try: self.device = next(self.parameters())[0].device
+        except StopIteration: pass
+        return self
+
+    def load_state_dict(self, f):
+        from pathlib import Path
+        if isinstance(f, (str, Path)):
+            device = self.device.type
+            if device == 'cuda': device = 'cuda:0'
+
+            return super().load_state_dict(torch.load(f, map_location=device))
+        else:
+            return super().load_state_dict(f)
+
     def  _mul_int(self, n):
         return [self] + [self.__class__(**self._args) for _ in range(n - 1)]
 
@@ -78,8 +74,8 @@ class Node(Module):
             return self._mul_list(n)
 
 class Conv(Node):
-    def __init__(self, c=None, k=3, p='half', s=1, d=1, g=1, b=True, ic=None, dims=None, act='relu'):
-        super().__init__(c, k, p, s, d, g, b, ic, dims, act)
+    def __init__(self, c=None, k=3, p='half', s=1, d=1, g=1, b=True, ic=None, act='relu'):
+        super().__init__(c, k, p, s, d, g, b, ic, act)
         self._set_activation()
 
     def build(self, x):
@@ -99,7 +95,6 @@ class Conv(Node):
     def _find_layer(self, x):
         shape_dict = [nn.Conv1d, nn.Conv2d, nn.Conv3d]
         ndim = len(x.shape) - 2
-        self._args['dims'] = ndim
         return shape_dict[ndim - 1]
 
     def _set_activation(self):
