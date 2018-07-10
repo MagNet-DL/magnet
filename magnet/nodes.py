@@ -36,8 +36,9 @@ class Node(Module):
         self._built = True
         self.to(mag.device)
 
-    def forward(self, *args, **kwargs):
+    def __call__(self, *args, **kwargs):
         if not (self._built and mag.build_lock): self.build(*args, **kwargs)
+        return super().__call__(*args, **kwargs)
 
     def _check_parameters(self, return_val):
         import warnings
@@ -75,32 +76,6 @@ class Node(Module):
 
         if type(n) is tuple or type(n) is list:
             return self._mul_list(n)
-
-class MonoNode(Node):
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self._set_activation()
-
-    def build(self, x):
-        layer_class = self._find_layer(x)
-        kwargs = self._get_kwargs()
-        self._layer = layer_class(**kwargs)
-
-        super().build(x)
-
-    def forward(self, x):
-        super().forward(x)
-        return self._activation(self._layer(x))
-
-    def _find_layer(self, x):
-        pass
-
-    def _get_kwargs(self):
-        return {k: self.configuration[v] for k, v in self._kwargs_dict.items()}
-
-    @property
-    def _kwargs_dict(self):
-        pass
 
 class Conv(Node):
     def __init__(self, c=None, k=3, p='half', s=1, d=1, g=1, b=True, ic=None, dims=None, act='relu'):
@@ -195,30 +170,6 @@ class Linear(Node):
         activation_dict = {'relu': F.relu, 'sigmoid': F.sigmoid, 'tanh': F.tanh,
                             'lrelu': partial(F.leaky_relu, leak=0.2), None: lambda x: x}
         self._activation = activation_dict[self._args['act']]
-
-    def _set_padding(self, x):
-        in_shape = x.shape
-
-        p = self._args['p']
-
-        if p == 'half': f = 0.5
-        elif p == 'same': f = 1
-        elif p == 'double':
-            self._upsample = 2
-            if self._args['c'] is None:
-                self._args['c'] = in_shape[1] // 2
-            f = 1
-        else: return
-
-        s = 1 / f
-        if not s.is_integer():
-            raise RuntimeError("Padding value won't hold for all vector sizes")
-
-        self._args['d'] = 1
-        self._args['s'] = int(s)
-        self._args['p'] = int(self._args['k'] // 2)
-        if self._args['c'] is None:
-            self._args['c'] = self._args['s'] * in_shape[1]
 
     def  _mul_list(self, n):
         lins = [self]
