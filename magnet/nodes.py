@@ -13,15 +13,11 @@ class Node(nn.Module):
         self._built = False
 
     def build(self, *args, **kwargs):
-        if self._built and mag.build_lock: return
-
-        [c.build(*args, **kwargs) for c in self.modules() if isinstance(c, Node) and c != self]
-
         self._built = True
         self.to(mag.device)
 
     def __call__(self, *args, **kwargs):
-        self.build(*args, **kwargs)
+        if not (self._built and mag.build_lock): self.build(*args, **kwargs)
         return super().__call__(*args, **kwargs)
 
     def _check_parameters(self, return_val):
@@ -101,17 +97,16 @@ class Conv(Node):
         self._set_padding(x)
         self._args['ic'] = x.shape[1]
 
+        self._activation = activation_wiki[self._args['act']]
         layer_class = self._find_layer(x)
-        layers = [layer_class(kernel_size=self._args['k'], out_channels=self._args['c'],
+        self._layer = layer_class(kernel_size=self._args['k'], out_channels=self._args['c'],
                                 stride=self._args['s'], padding=self._args['p'], dilation=self._args['d'],
-                                groups=self._args['g'], bias=self._args['b'], in_channels=self._args['ic']),
-                    Lambda(activation_wiki[self._args['act']], name='Activation')]
-        if hasattr(self, '_upsample'): layers.insert(0, Lambda(lambda x: F.upsample(x, scale_factor=self._upsample), name='Upsample'))
-        self._layer = nn.Sequential(*layers)
+                                groups=self._args['g'], bias=self._args['b'], in_channels=self._args['ic'])
         super().build(x)
 
     def forward(self, x):
-        return self._layer(x)
+        if hasattr(self, '_upsample'): layers.insert(0, Lambda(lambda x: F.upsample(x, scale_factor=self._upsample), name='Upsample'))
+        return self._activation(self._layer(x))
 
     def _find_layer(self, x):
         shape_dict = [nn.Conv1d, nn.Conv2d, nn.Conv3d]
@@ -142,7 +137,7 @@ class Conv(Node):
         if self._args['c'] is None:
             self._args['c'] = self._args['s'] * in_shape[1]
 
-    def  _mul_list(self, n):
+    def _mul_list(self, n):
         convs = [self]
         self._args['c'] = n[0]
         kwargs = self._args.copy()
@@ -162,17 +157,17 @@ class Linear(Node):
 
         self._args['i'] = prod(x.shape[1:]) if self._args['flat'] else x.shape[-1]
 
-        layers = [nn.Linear(*[self._args[k] for k in ('i', 'o', 'b')]),
-                    Lambda(activation_wiki[self._args['act']], name='Activation')]
-        if self._args['flat']: layers.insert(0, Lambda(lambda x: x.view(x.size(0), -1), name='Flatten'))
 
-        self._layer = nn.Sequential(*layers)
+        self._activation = activation_wiki[self._args['act']]
+
+        self._layer = nn.Linear(*[self._args[k] for k in ('i', 'o', 'b')])
         super().build(x)
 
     def forward(self, x):
-        return self._layer(x)
+        if self._args['flat']: x = x.view(x.size(0), -1)
+        return self._activation(self._layer(x))
 
-    def  _mul_list(self, n):
+    def _mul_list(self, n):
         lins = [self]
         self._args['o'] = n[0]
         kwargs = self._args.copy()
