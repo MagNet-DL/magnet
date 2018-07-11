@@ -17,12 +17,13 @@ class Trainer:
 
 		self.history = History()
 
-		self._save_path = save_path
+		self.save_path = save_path
 
+		self.babysitter = None
 		self._iterations = -1
 		if save_path is not None:
-			self._save_path = Path(save_path)
-			self._save_path.mkdir(parents=True, exist_ok=True)
+			self.save_path = Path(save_path)
+			self.save_path.mkdir(parents=True, exist_ok=True)
 			self._load()
 
 	def _optimize(self, dataloader, batch):
@@ -47,6 +48,7 @@ class Trainer:
 		cold_start = kwargs.get('cold_start', False) and not hasattr(self, '_iterations')
 		training = kwargs.get('training', True)
 		monitor_finally = kwargs.get('monitor_finally', True)
+		self.babysitter = kwargs.pop('babysitter', None)
 
 		if isinstance(self.data, data_module.Data):
 			dataloader = {'train': self.data(batch_size, shuffle)}
@@ -55,9 +57,9 @@ class Trainer:
 			dataloader['val'] = self.data(batch_size_val, shuffle=shuffle_val, mode='val')
 		else:
 			dataloader = {'train': self.data[0], 'val': self.data[1]}
-		if self._save_path is not None:
-			dataloader['train'].load_state_dict(self._save_path / 'dl_train.p')
-			dataloader['val'].load_state_dict(self._save_path / 'dl_val.p')
+		if self.save_path is not None:
+			dataloader['train'].load_state_dict(self.save_path / 'dl_train.p')
+			dataloader['val'].load_state_dict(self.save_path / 'dl_val.p')
 
 		for k, v in dataloader.items():
 			if hasattr(self, '_dataloader'):
@@ -177,6 +179,7 @@ class Trainer:
 	def _monitor(self, batch, **kwargs):
 		self._iterations = batch
 		self.history.flush(batches=batch, epochs=batch / self._batches_per_epoch)
+		if self.babysitter is not None: self.babysitter.flush(batches=batch, epochs=batch / self._batches_per_epoch)
 
 	def _on_epoch_end(self, epoch):
 		pass
@@ -184,11 +187,11 @@ class Trainer:
 	def _on_training_end(self):
 		pass
 
-	def _gradient_callback(self):
-		pass
+	def _gradient_callback(self, batch):
+		if self.babysitter is not None: self.babysitter.append(self.models, batches=batch, epochs=batch / self._batches_per_epoch)
 
 	def _load(self, save_path=None):
-		if save_path is None: save_path = self._save_path
+		if save_path is None: save_path = self.save_path
 		if save_path is None: return
 		import torch, pickle
 
@@ -214,8 +217,10 @@ class Trainer:
 		state_dict = _load_obj('state', {})
 		for attr, val in state_dict.items(): setattr(self, attr, val)
 
+		if self.babysitter is not None: self.babysitter.load(save_path)
+
 	def _save(self, dataloader=None, save_path=None):
-		if save_path is None: save_path = self._save_path
+		if save_path is None: save_path = self.save_path
 		if save_path is None: return
 
 		import torch, pickle
@@ -244,8 +249,10 @@ class Trainer:
 			dataloader['train'].save_state_dict(save_path / 'dl_train.p')
 			dataloader['val'].save_state_dict(save_path / 'dl_val.p')
 
+		if self.babysitter is not None: self.babysitter.save(save_path)
+
 	def _clear_checkpoints(self, save_path=None):
-		if save_path is None: save_path = self._save_path
+		if save_path is None: save_path = self.save_path
 		if save_path is None: return
 
 		if save_path.exists():
@@ -263,7 +270,7 @@ class SupervisedTrainer(Trainer):
 
 		if training:
 			loss.backward()
-			self._gradient_callback()
+			self._gradient_callback(batch)
 			optimizer.step()
 			optimizer.zero_grad()
 

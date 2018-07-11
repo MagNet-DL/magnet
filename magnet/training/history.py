@@ -20,8 +20,11 @@ class History(dict):
 
 	def show(self, key=None, log=False, x_key=None, xlabel=None, validation=True, label=None, ax=None):
 		from matplotlib import pyplot as plt
+
 		if key is None:
-			for k in self.keys(): self.show(k, log)
+			for k in self.keys():
+				self.show(k, log, x_key, xlabel, validation, label=k)
+				plt.show()
 			return
 
 		if ax is None: fig, ax = plt.subplots()

@@ -36,13 +36,14 @@ def breakage(trainer, iterations=100, frac_sample=0.01):
     from types import MethodType
 
     broken_weights = []
-    def gradient_callback(self):
+    _prev_grad_callback = trainer._gradient_callback
+    def gradient_callback(self, batch):
+        _prev_grad_callback(batch)
         for model in self.models:
             for name, p in model.named_parameters():
                 if p.grad is None and name not in broken_weights:
                     broken_weights.append(name)
 
-    _prev_grad_callback = trainer._gradient_callback
     trainer._gradient_callback = MethodType(gradient_callback, trainer)
 
     data = trainer.data
@@ -107,3 +108,32 @@ class Monitor:
 @contextmanager
 def shape(debug=True):
     with SetTrace(Monitor(debug)): yield
+
+class Babysitter:
+    def __init__(self, monitor_freq=10):
+        from magnet.training.history import History
+
+        self.history = History()
+
+        self.monitor_freq = monitor_freq
+
+    def append(self, models, **stamps):
+        if stamps['batches'] == 0: return
+        if stamps['batches'] % int((stamps['batches'] / stamps['epochs']) // self.monitor_freq): return
+
+        for model in models:
+            for name, p in model.named_parameters():
+                v = torch.abs(p.grad / p)
+                v[v != v] = 0
+                self.history.append(name, v.mean().item(), **stamps)
+
+    def flush(self, **stamps):
+        self.history.flush(**stamps)
+
+    def save(self, save_path):
+        with open(save_path / ('babysitter.p'), 'wb') as f: pickle.dump(self.history, f)
+
+    def load(self, save_path):
+        path = save_path / ('babysitter.p')
+        if path.exists():
+            with open(path, 'rb') as f: self.history = pickle.load(f)
