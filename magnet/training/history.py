@@ -25,13 +25,13 @@ class History(dict):
 			return
 
 		if ax is None: fig, ax = plt.subplots()
-		label = 'training' if label is None else label
-		self[key].show(ax, x_key, label=label)
+		lbl = 'training' if label is None else label
+		self[key].show(ax, x_key, label=lbl)
 
 		if validation:
 			try:
-				label = 'validation' if label is None else label
-				self['val_' + key].show(ax, x_key, label=label)
+				lbl = 'validation' if label is None else label
+				self['val_' + key].show(ax, x_key, label=lbl)
 			except KeyError: pass
 
 		if log: plt.yscale('log')

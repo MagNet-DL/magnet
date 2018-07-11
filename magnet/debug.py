@@ -1,3 +1,6 @@
+import sys, inspect, torch
+from contextlib import contextmanager
+
 def overfit(trainer, batch_size, epochs=1, metric='loss', sample_space=None, ax=None):
     from matplotlib import pyplot as plt
     if sample_space is None:
@@ -48,9 +51,59 @@ def breakage(trainer, iterations=100, frac_sample=0.01):
     with trainer.mock(): trainer.train(iterations=iterations, save_interval=None)
 
     trainer.data = data
-    trainer._gradient_callback = MethodType(_prev_grad_callback, trainer)
+    trainer._gradient_callback = _prev_grad_callback
 
     if len(broken_weights) == 0:
         print('No breakage detected')
     else:
         raise RuntimeError('Breaks in the following parameters: ' + ', '.join(broken_weights))
+
+class SetTrace(object):
+    def __init__(self, func):
+        self.func = func
+
+    def __enter__(self):
+        sys.settrace(self.func)
+        return self
+
+    def __exit__(self, ext_type, exc_value, traceback):
+        sys.settrace(None)
+
+class Monitor:
+    def __init__(self, names=True):
+        self.names = names
+
+    def init(self, frameinfo):
+        self.filename = frameinfo.filename.strip()
+        self.stackdepth = len(inspect.stack())
+        self.lineno = frameinfo.lineno
+
+    def is_same(self, frame):
+        frameinfo = inspect.getframeinfo(frame)
+        return frameinfo.function.strip() == 'forward' and len(inspect.stack()) == self.stackdepth
+
+    def __call__(self, frame, event, arg):
+        frameinfo = inspect.getframeinfo(frame)
+        if not hasattr(self, 'filename') and frameinfo.function.strip() == 'forward':
+            self.init(frameinfo)
+
+        if not self.is_same(frame): return
+
+        if event not in ("line", "return"): return self.__call__
+
+        if self.names is True:
+            shape_dict = {n: tuple(v.shape)
+                   for n, v in frame.f_locals.items() if torch.is_tensor(v)}
+        elif isinstance(self.names, (tuple, list)):
+            shape_dict = {n: tuple(v.shape)
+                   for n, v in frame.f_locals.items() if torch.is_tensor(v) and n in self.names}
+
+        if len(shape_dict) != 0:
+            print(shape_dict)
+            lineno = frameinfo.lineno - self.lineno if event != "return" else 'return'
+            print(f'{lineno}.', frameinfo.code_context[0].strip(), '\n')
+        return self.__call__
+
+@contextmanager
+def shape(debug=True):
+    with SetTrace(Monitor(debug)): yield
