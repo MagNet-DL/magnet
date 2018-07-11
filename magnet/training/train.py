@@ -8,7 +8,7 @@ class Trainer:
 		from pathlib import Path
 		from torch import optim
 
-		self._models = models
+		self.models = models
 		self.data = data
 		self._losses = losses
 		if optimizers[0] == 'adam': optimizers = [optim.Adam(model.parameters(), amsgrad=True) for model in models]
@@ -76,7 +76,7 @@ class Trainer:
 
 		if cold_start:
 			_kwargs = {k: v for k, v in kwargs.items() if k not in ('iterations', 'cold_start', 'training', 'monitor_finally')}
-			with mag.eval(*self._models):
+			with mag.eval(*self.models):
 				self.train(epochs, batch_size, shuffle, iterations=int(self._batches_per_epoch // monitor_freq) + 1,
 							cold_start=False, training=False, monitor_finally=False, **_kwargs)
 
@@ -91,11 +91,12 @@ class Trainer:
 
 		self._on_training_start()
 
-		save_interval, _save_multiplier = save_interval.split(' ')
-		save_interval = float(save_interval); _save_multiplier = _save_multiplier.lower()
-		_save_multiplier_dict = {'m': 60, 's': 1, 'h': 3600, 'ms': 1e-3, 'us': 1e-6, 'd': 24 * 3600}
-		_save_multiplier = _save_multiplier_dict[_save_multiplier]
-		save_interval *= _save_multiplier
+		if save_interval is not None:
+			save_interval, _save_multiplier = save_interval.split(' ')
+			save_interval = float(save_interval); _save_multiplier = _save_multiplier.lower()
+			_save_multiplier_dict = {'m': 60, 's': 1, 'h': 3600, 'ms': 1e-3, 'us': 1e-6, 'd': 24 * 3600}
+			_save_multiplier = _save_multiplier_dict[_save_multiplier]
+			save_interval *= _save_multiplier
 
 		for batch in progress_bar:
 			is_last_batch = (batch == start_iteration + iterations - 1)
@@ -112,7 +113,7 @@ class Trainer:
 			self._on_batch_end(batch)
 
 			if (is_last_batch and monitor_finally) or (not batch % int(self._batches_per_epoch // validate_freq) and batch != 0):
-				with mag.eval(*self._models): self._validate(dataloader['val'], validation_batches)
+				with mag.eval(*self.models): self._validate(dataloader['val'], validation_batches)
 
 			if not batch % int(self._batches_per_epoch // monitor_freq) and batch != 0:
 				self._monitor(batch, progress_bar=progress_bar)
@@ -122,7 +123,7 @@ class Trainer:
 					self._on_epoch_end(int(batch // self._batches_per_epoch))
 			except AttributeError: pass
 
-			if is_last_batch or ((time() - start_time > save_interval) and batch != 0):
+			if save_interval is not None and (is_last_batch or ((time() - start_time > save_interval) and batch != 0)):
 				self._save(dataloader)
 				start_time = time()
 
@@ -183,6 +184,9 @@ class Trainer:
 	def _on_training_end(self):
 		pass
 
+	def _gradient_callback(self):
+		pass
+
 	def _load(self, save_path=None):
 		if save_path is None: save_path = self._save_path
 		if save_path is None: return
@@ -200,7 +204,7 @@ class Trainer:
 			else:
 				return default
 
-		for i, model in enumerate(self._models): _load_module(model, 'models', str(i))
+		for i, model in enumerate(self.models): _load_module(model, 'models', str(i))
 
 		for i, optimizer in enumerate(self._optimizers): _load_module(optimizer, 'optimizers', str(i))
 
@@ -227,7 +231,7 @@ class Trainer:
 		def _save_obj(obj, name):
 			with open(save_path / (name + '.p'), 'wb') as f: pickle.dump(obj, f)
 
-		for i, model in enumerate(self._models): _save_module(model, 'models', str(i))
+		for i, model in enumerate(self.models): _save_module(model, 'models', str(i))
 
 		for i, optimizer in enumerate(self._optimizers): _save_module(optimizer, 'optimizers', str(i))
 
@@ -253,12 +257,13 @@ class SupervisedTrainer(Trainer):
 		super().__init__([model], data, [loss], [optimizer], metrics, save_path)
 
 	def _optimize(self, dataloader, batch, training):
-		model = self._models[0]; optimizer = self._optimizers[0]
+		model = self.models[0]; optimizer = self._optimizers[0]
 
 		loss = self._get_loss(dataloader)
 
 		if training:
 			loss.backward()
+			self._gradient_callback()
 			optimizer.step()
 			optimizer.zero_grad()
 
@@ -266,7 +271,7 @@ class SupervisedTrainer(Trainer):
 		for _ in range(validation_batches): self._get_loss(dataloader, validation=True)
 
 	def _get_loss(self, dataloader, validation=False):
-		model = self._models[0]; loss_fn = self._losses[0]
+		model = self.models[0]; loss_fn = self._losses[0]
 
 		x, y = next(dataloader)
 		y_pred = model(x)
