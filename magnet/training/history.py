@@ -18,17 +18,21 @@ class History(dict):
 			self[key].append(value, buffer, **stamps)
 		return
 
-	def show(self, key=None, log=False, x_key=None, xlabel=None):
+	def show(self, key=None, log=False, x_key=None, xlabel=None, validation=True, label=None, ax=None):
 		from matplotlib import pyplot as plt
 		if key is None:
 			for k in self.keys(): self.show(k, log)
 			return
 
-		fig, ax = plt.subplots()
-		self[key].show(ax, x_key, label='training')
-		try:
-			self['val_' + key].show(ax, x_key, label='validation')
-		except KeyError: pass
+		if ax is None: fig, ax = plt.subplots()
+		label = 'training' if label is None else label
+		self[key].show(ax, x_key, label=label)
+
+		if validation:
+			try:
+				label = 'validation' if label is None else label
+				self['val_' + key].show(ax, x_key, label=label)
+			except KeyError: pass
 
 		if log: plt.yscale('log')
 
@@ -40,7 +44,8 @@ class History(dict):
 			plt.xlabel(x_key)
 			plt.title(f'{key.title()} vs {x_key.title()}')
 		else: plt.title(key.title())
-		plt.show()
+
+		plt.legend()
 
 	def flush(self, key=None, **stamps):
 		if key is None:
