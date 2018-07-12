@@ -1,4 +1,5 @@
 import magnet as mag
+from contextlib import contextmanager
 
 class Trainer:
 	def __init__(self, models, data, losses=None, optimizers=['adam'], metrics=None, save_path=None):
@@ -7,19 +8,22 @@ class Trainer:
 		from pathlib import Path
 		from torch import optim
 
-		self._models = models
-		self._data = data
+		self.models = models
+		self.data = data
 		self._losses = losses
 		if optimizers[0] == 'adam': optimizers = [optim.Adam(model.parameters(), amsgrad=True) for model in models]
 		self._optimizers = optimizers
 		self._metrics = {metrics: getattr(metrics_module, metrics.lower())} if metrics is not None else {}
 
-		self._history = History()
+		self.history = History()
 
-		self._save_path = save_path
+		self.save_path = save_path
+
+		self.babysitter = None
+		self._iterations = -1
 		if save_path is not None:
-			self._save_path = Path(save_path)
-			self._save_path.mkdir(parents=True, exist_ok=True)
+			self.save_path = Path(save_path)
+			self.save_path.mkdir(parents=True, exist_ok=True)
 			self._load()
 
 	def _optimize(self, dataloader, batch):
@@ -44,28 +48,27 @@ class Trainer:
 		cold_start = kwargs.get('cold_start', False) and not hasattr(self, '_iterations')
 		training = kwargs.get('training', True)
 		monitor_finally = kwargs.get('monitor_finally', True)
+		self.babysitter = kwargs.pop('babysitter', None)
 
-		if isinstance(self._data, data_module.Data):
-			dataloader = {'train': self._data(batch_size, shuffle)}
+		if isinstance(self.data, data_module.Data):
+			dataloader = {'train': self.data(batch_size, shuffle)}
 
 			if batch_size_val < 0: batch_size_val = batch_size
-			dataloader['val'] = self._data(batch_size_val, shuffle=shuffle_val, mode='val')
+			dataloader['val'] = self.data(batch_size_val, shuffle=shuffle_val, mode='val')
 		else:
-			dataloader = {'train': self._data[0], 'val': self._data[1]}
-
-		if self._save_path is not None:
-			dataloader['train'].load_state_dict(self._save_path / 'dl_train.p')
-			dataloader['val'].load_state_dict(self._save_path / 'dl_val.p')
+			dataloader = {'train': self.data[0], 'val': self.data[1]}
+		if self.save_path is not None:
+			dataloader['train'].load_state_dict(self.save_path / 'dl_train.p')
+			dataloader['val'].load_state_dict(self.save_path / 'dl_val.p')
 
 		for k, v in dataloader.items():
 			if hasattr(self, '_dataloader'):
-				if v.compatible_with(self._dataloader[k]):
+				if k in self._dataloader.keys() and v.compatible_with(self._dataloader[k]):
 					dataloader[k] = self._dataloader[k]
 				else:
 					self._dataloader[k] = v
 			else:
-				self._dataloader = dataloader
-				break
+				self._dataloader = {k: v}
 
 		validation_batches=kwargs.get('validation_batches', int(len(dataloader['val']) // validate_freq))
 
@@ -75,12 +78,12 @@ class Trainer:
 
 		if cold_start:
 			_kwargs = {k: v for k, v in kwargs.items() if k not in ('iterations', 'cold_start', 'training', 'monitor_finally')}
-			with mag.eval(*self._models):
+			with mag.eval(*self.models):
 				self.train(epochs, batch_size, shuffle, iterations=int(self._batches_per_epoch // monitor_freq) + 1,
 							cold_start=False, training=False, monitor_finally=False, **_kwargs)
 
-		self._history.buffer_size = kwargs.get('buffer_size', self._batches_per_epoch)
-		self._history.val_buffer_size = kwargs.get('val_buffer_size', len(dataloader['val']))
+		self.history.buffer_size = kwargs.get('buffer_size', self._batches_per_epoch)
+		self.history.val_buffer_size = kwargs.get('val_buffer_size', len(dataloader['val']))
 
 		try: start_iteration = self._iterations + 1
 		except AttributeError: start_iteration = self._iterations = 0
@@ -90,11 +93,12 @@ class Trainer:
 
 		self._on_training_start()
 
-		save_interval, _save_multiplier = save_interval.split(' ')
-		save_interval = float(save_interval); _save_multiplier = _save_multiplier.lower()
-		_save_multiplier_dict = {'m': 60, 's': 1, 'h': 3600, 'ms': 1e-3, 'us': 1e-6, 'd': 24 * 3600}
-		_save_multiplier = _save_multiplier_dict[_save_multiplier]
-		save_interval *= _save_multiplier
+		if save_interval is not None:
+			save_interval, _save_multiplier = save_interval.split(' ')
+			save_interval = float(save_interval); _save_multiplier = _save_multiplier.lower()
+			_save_multiplier_dict = {'m': 60, 's': 1, 'h': 3600, 'ms': 1e-3, 'us': 1e-6, 'd': 24 * 3600}
+			_save_multiplier = _save_multiplier_dict[_save_multiplier]
+			save_interval *= _save_multiplier
 
 		for batch in progress_bar:
 			is_last_batch = (batch == start_iteration + iterations - 1)
@@ -111,7 +115,7 @@ class Trainer:
 			self._on_batch_end(batch)
 
 			if (is_last_batch and monitor_finally) or (not batch % int(self._batches_per_epoch // validate_freq) and batch != 0):
-				with mag.eval(*self._models): self._validate(dataloader['val'], validation_batches)
+				with mag.eval(*self.models): self._validate(dataloader['val'], validation_batches)
 
 			if not batch % int(self._batches_per_epoch // monitor_freq) and batch != 0:
 				self._monitor(batch, progress_bar=progress_bar)
@@ -121,13 +125,23 @@ class Trainer:
 					self._on_epoch_end(int(batch // self._batches_per_epoch))
 			except AttributeError: pass
 
-			if is_last_batch or ((time() - start_time > save_interval) and batch != 0):
+			if save_interval is not None and (is_last_batch or ((time() - start_time > save_interval) and batch != 0)):
 				self._save(dataloader)
 				start_time = time()
 
 		self._on_training_end()
 
-	def show_history(self, keys=None, vs=None):
+	@contextmanager
+	def mock(self):
+		from pathlib import Path
+		save_path = Path('.mock_trainer')
+
+		self._save(save_path=save_path)
+		yield
+		self._load(save_path=save_path)
+		self._clear_checkpoints(save_path=save_path)
+
+	def show_history(self, keys=None, vs=None, log=None):
 		xlabel = None
 
 		if vs is None:
@@ -140,13 +154,15 @@ class Trainer:
 			xlabel = 'iterations'
 
 		if keys is None:
-			keys = [k for k in self._history.keys() if k not in ('batches', ) and k[:4] != 'val_']
+			keys = [k for k in self.history.keys() if k not in ('batches', ) and k[:4] != 'val_']
 
 		for k in keys:
 			if 'loss' in k:
-				self._history.show(k, log=True, x_key=vs, xlabel=xlabel)
+				_log = log if log is not None else True
+				self.history.show(k, log=_log, x_key=vs, xlabel=xlabel)
 			else:
-				self._history.show(k, x_key=vs, xlabel=xlabel)
+				_log = log if log is not None else False
+				self.history.show(k, log=_log, x_key=vs, xlabel=xlabel)
 
 	def _on_training_start(self):
 		pass
@@ -162,7 +178,8 @@ class Trainer:
 
 	def _monitor(self, batch, **kwargs):
 		self._iterations = batch
-		self._history.flush(batches=batch, epochs=batch / self._batches_per_epoch)
+		self.history.flush(batches=batch, epochs=batch / self._batches_per_epoch)
+		if self.babysitter is not None: self.babysitter.flush(batches=batch, epochs=batch / self._batches_per_epoch)
 
 	def _on_epoch_end(self, epoch):
 		pass
@@ -170,73 +187,90 @@ class Trainer:
 	def _on_training_end(self):
 		pass
 
-	def _load(self):
-		if self._save_path is None: return
+	def _gradient_callback(self, batch):
+		if self.babysitter is not None: self.babysitter.append(self.models, batches=batch, epochs=batch / self._batches_per_epoch)
+
+	def _load(self, save_path=None):
+		if save_path is None: save_path = self.save_path
+		if save_path is None: return
 		import torch, pickle
 
 		def _load_module(module, subpath, name_alternative):
-			device = module.device.type
-			if device == 'cuda': device = 'cuda:0'
+			name = name_alternative if not hasattr(module, 'name') else module.name
+			filepath = save_path / subpath / (name + '.pt')
+			if filepath.exists(): module.load_state_dict(torch.load(filepath))
 
-			name = name_alternative if not hasattr(module, 'name') else optimizer.name
-			filepath = self._save_path / subpath / (name + '.pt')
-			if filepath.exists(): module.load_state_dict(torch.load(filepath, map_location=device))
-
-		def _load_obj(name, default):
-			filepath = self._save_path / (name + '.p')
+		def _load_obj(name, default=None):
+			filepath = save_path / (name + '.p')
 			if filepath.exists():
 				with open(filepath, 'rb') as f: return pickle.load(f)
 			else:
-				return None
+				return default
 
-		for i, model in enumerate(self._models): _load_module(model, 'models', str(i))
+		for i, model in enumerate(self.models): _load_module(model, 'models', str(i))
 
 		for i, optimizer in enumerate(self._optimizers): _load_module(optimizer, 'optimizers', str(i))
 
 		history = _load_obj('history')
-		if history is not None: self._history = history
+		if history is not None: self.history = history
 
 		state_dict = _load_obj('state', {})
 		for attr, val in state_dict.items(): setattr(self, attr, val)
 
-	def _save(self, dataloader):
-		if self._save_path is None: return
+		if self.babysitter is not None: self.babysitter.load(save_path)
+
+	def _save(self, dataloader=None, save_path=None):
+		if save_path is None: save_path = self.save_path
+		if save_path is None: return
+
 		import torch, pickle
 
 		subpaths = ['models', 'optimizers']
-		for subpath in subpaths: (self._save_path / subpath).mkdir(parents=True, exist_ok=True)
+		for subpath in subpaths: (save_path / subpath).mkdir(parents=True, exist_ok=True)
 
 		def _save_module(module, subpath, name_alternative):
-			name = name_alternative if not hasattr(module, 'name') else optimizer.name
-			filepath = self._save_path / subpath / (name + '.pt')
+			name = name_alternative if not hasattr(module, 'name') else module.name
+			filepath = save_path / subpath / (name + '.pt')
 			torch.save(module.state_dict(), filepath)
 
-		def _save_obj(object, name):
-			with open(self._save_path / (name + '.p'), 'wb') as f: pickle.dump(obj, f)
+		def _save_obj(obj, name):
+			with open(save_path / (name + '.p'), 'wb') as f: pickle.dump(obj, f)
 
-		for i, model in enumerate(self._models): _save_module(model, 'models', str(i))
+		for i, model in enumerate(self.models): _save_module(model, 'models', str(i))
 
 		for i, optimizer in enumerate(self._optimizers): _save_module(optimizer, 'optimizers', str(i))
 
-		_save_obj(self._history, 'history')
+		_save_obj(self.history, 'history')
 
-		state_dict = {attr: getattr(self, attr) for attr in ('_batches_per_epoch', 'iterations')}
+		state_dict = {attr: getattr(self, attr) for attr in ('_batches_per_epoch', '_iterations') if hasattr(self, attr)}
 		_save_obj(state_dict, 'state')
 
-		dataloader['train'].save_state_dict(self._save_path / 'dl_train.p')
-		dataloader['val'].save_state_dict(self._save_path / 'dl_val.p')
+		if dataloader is not None:
+			dataloader['train'].save_state_dict(save_path / 'dl_train.p')
+			dataloader['val'].save_state_dict(save_path / 'dl_val.p')
+
+		if self.babysitter is not None: self.babysitter.save(save_path)
+
+	def _clear_checkpoints(self, save_path=None):
+		if save_path is None: save_path = self.save_path
+		if save_path is None: return
+
+		if save_path.exists():
+			import shutil
+			shutil.rmtree(save_path)
 
 class SupervisedTrainer(Trainer):
 	def __init__(self, model, data, loss=None, optimizer='adam', metrics=None, save_path=None):
 		super().__init__([model], data, [loss], [optimizer], metrics, save_path)
 
 	def _optimize(self, dataloader, batch, training):
-		model = self._models[0]; optimizer = self._optimizers[0]
+		model = self.models[0]; optimizer = self._optimizers[0]
 
 		loss = self._get_loss(dataloader)
 
 		if training:
 			loss.backward()
+			self._gradient_callback(batch)
 			optimizer.step()
 			optimizer.zero_grad()
 
@@ -244,16 +278,16 @@ class SupervisedTrainer(Trainer):
 		for _ in range(validation_batches): self._get_loss(dataloader, validation=True)
 
 	def _get_loss(self, dataloader, validation=False):
-		model = self._models[0]; loss_fn = self._losses[0]
+		model = self.models[0]; loss_fn = self._losses[0]
 
 		x, y = next(dataloader)
 		y_pred = model(x)
 
 		loss = loss_fn(y_pred, y)
 
-		self._history.append('loss', loss.item(), validation=validation, buffer=True)
+		self.history.append('loss', loss.item(), validation=validation, buffer=True)
 		for k in self._metrics.keys():
-			self._history.append(k, self._metrics[k](y_pred, y).item(), validation=validation, buffer=True)
+			self.history.append(k, self._metrics[k](y_pred, y).item(), validation=validation, buffer=True)
 
 		return loss
 
@@ -261,9 +295,9 @@ class SupervisedTrainer(Trainer):
 		super()._monitor(batch, **kwargs)
 		progress_bar = kwargs.pop('progress_bar')
 
-		loss = self._history['loss'][-1];
+		loss = self.history['loss'][-1];
 		try:
-			val_loss = self._history['val_loss'][-1]
+			val_loss = self.history['val_loss'][-1]
 			progress_bar.set_description(f'{loss:.2f}, {val_loss:.2f}', refresh=False)
 		except KeyError:
 			progress_bar.set_description(f'{loss:.2f}', refresh=False)
