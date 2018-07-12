@@ -24,7 +24,8 @@ class Trainer:
 
 		self.babysitter = None
 		self._iterations = -1
-		self.callbacks = Callbacks()
+		self.callbacks = Callbacks('on_training_start', 'on_epoch_start', 'on_batch_start',
+									'gradient', 'on_batch_end', 'on_training_end')
 
 		if save_path is not None:
 			self.save_path = Path(save_path)
@@ -96,7 +97,7 @@ class Trainer:
 		progress_bar = tqdm(range(start_iteration, start_iteration + iterations), unit_scale=True,
 							unit_divisor=self._batches_per_epoch, leave=False)
 
-		self.callbacks(TrainingPhases.ON_TRAINING_START)
+		self.callbacks('on_training_start', self)
 
 		if save_interval is not None:
 			save_interval, _save_multiplier = save_interval.split(' ')
@@ -110,14 +111,14 @@ class Trainer:
 
 			try:
 				if not batch % self._batches_per_epoch:
-					self.callbacks(TrainingPhases.ON_EPOCH_START)
+					self.callbacks('on_epoch_start', self)
 			except AttributeError: pass
 
-			self.callbacks(TrainingPhases.ON_BATCH_START)
+			self.callbacks('on_batch_start', self)
 
 			self._optimize(dataloader['train'], batch, training)
 
-			self.callbacks(TrainingPhases.ON_BATCH_END)
+			self.callbacks('on_batch_end', self)
 
 			if (is_last_batch and monitor_finally) or (not batch % int(self._batches_per_epoch // validate_freq) and batch != 0):
 				with mag.eval(*self.models): self._validate(dataloader['val'], validation_batches)
@@ -127,14 +128,14 @@ class Trainer:
 
 			try:
 				if not (batch + 1) % self._batches_per_epoch:
-					self.callbacks(TrainingPhases.ON_EPOCH_END)
+					self.callbacks('on_epoch_end', self)
 			except AttributeError: pass
 
 			if save_interval is not None and (is_last_batch or ((time() - start_time > save_interval) and batch != 0)):
 				self._save(dataloader)
 				start_time = time()
 
-		self.callbacks(TrainingPhases.ON_TRAINING_END)
+		self.callbacks('on_training_end', self)
 
 	@contextmanager
 	def mock(self):
@@ -257,7 +258,7 @@ class SupervisedTrainer(Trainer):
 
 		if training:
 			loss.backward()
-			self.callbacks(TrainingPhases.GRADIENT)
+			self.callbacks('gradient', self)
 			optimizer.step()
 			optimizer.zero_grad()
 
@@ -294,12 +295,3 @@ class ClassifierTrainer(SupervisedTrainer):
 		from torch import nn
 
 		super().__init__(model, data, nn.CrossEntropyLoss(), optimizer, metrics='accuracy', save_path=save_path)
-
-class TrainingPhases(Enum):
-	ON_TRAINING_START = 0
-	ON_EPOCH_START = 1
-	ON_BATCH_START = 2
-	GRADIENT = 3
-	ON_BATCH_END = 4
-	ON_EPOCH_END = 5
-	ON_TRAINING_END = 6

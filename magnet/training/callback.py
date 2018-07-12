@@ -1,6 +1,6 @@
 class Callbacks:
-	def __init__(self):
-		self.callbacks = {}
+	def __init__(self, *phases):
+		self.callbacks = {phase: [] for phase in phases}
 
 	def add(self, name, callback, phases):
 		if not isinstance(phases, (tuple, list)): phases = (phases, )
@@ -11,7 +11,7 @@ class Callbacks:
 			try:
 				self.callbacks[phase][name] = callback
 			except KeyError:
-				self.callbacks[phase] = {name: callback}
+				raise ValueError(f'Phase {phase} not allowed. Need one of {list(self.callbacks.keys())}.')
 
 	def find(self, name):
 		found_callback = None
