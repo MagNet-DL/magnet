@@ -1,10 +1,13 @@
 import magnet as mag
 from contextlib import contextmanager
+from enum import Enum
 
 class Trainer:
 	def __init__(self, models, data, losses=None, optimizers=['adam'], metrics=None, save_path=None):
 		from magnet.training import metrics as metrics_module
 		from magnet.training.history import History
+		from magnet.training.callback import Callbacks
+
 		from pathlib import Path
 		from torch import optim
 
@@ -21,6 +24,8 @@ class Trainer:
 
 		self.babysitter = None
 		self._iterations = -1
+		self.callbacks = Callbacks()
+
 		if save_path is not None:
 			self.save_path = Path(save_path)
 			self.save_path.mkdir(parents=True, exist_ok=True)
@@ -91,7 +96,7 @@ class Trainer:
 		progress_bar = tqdm(range(start_iteration, start_iteration + iterations), unit_scale=True,
 							unit_divisor=self._batches_per_epoch, leave=False)
 
-		self._on_training_start()
+		self.callbacks(TrainingPhases.ON_TRAINING_START)
 
 		if save_interval is not None:
 			save_interval, _save_multiplier = save_interval.split(' ')
@@ -105,14 +110,14 @@ class Trainer:
 
 			try:
 				if not batch % self._batches_per_epoch:
-					self._on_epoch_start(int(batch * self._batches_per_epoch))
+					self.callbacks(TrainingPhases.ON_EPOCH_START)
 			except AttributeError: pass
 
-			self._on_batch_start(batch)
+			self.callbacks(TrainingPhases.ON_BATCH_START)
 
 			self._optimize(dataloader['train'], batch, training)
 
-			self._on_batch_end(batch)
+			self.callbacks(TrainingPhases.ON_BATCH_END)
 
 			if (is_last_batch and monitor_finally) or (not batch % int(self._batches_per_epoch // validate_freq) and batch != 0):
 				with mag.eval(*self.models): self._validate(dataloader['val'], validation_batches)
@@ -122,14 +127,14 @@ class Trainer:
 
 			try:
 				if not (batch + 1) % self._batches_per_epoch:
-					self._on_epoch_end(int(batch // self._batches_per_epoch))
+					self.callbacks(TrainingPhases.ON_EPOCH_END)
 			except AttributeError: pass
 
 			if save_interval is not None and (is_last_batch or ((time() - start_time > save_interval) and batch != 0)):
 				self._save(dataloader)
 				start_time = time()
 
-		self._on_training_end()
+		self.callbacks(TrainingPhases.ON_TRAINING_END)
 
 	@contextmanager
 	def mock(self):
@@ -164,28 +169,10 @@ class Trainer:
 				_log = log if log is not None else False
 				self.history.show(k, log=_log, x_key=vs, xlabel=xlabel)
 
-	def _on_training_start(self):
-		pass
-
-	def _on_epoch_start(self, epoch):
-		pass
-
-	def _on_batch_start(self, batch):
-		pass
-
-	def _on_batch_end(self, batch):
-		pass
-
 	def _monitor(self, batch, **kwargs):
 		self._iterations = batch
 		self.history.flush(batches=batch, epochs=batch / self._batches_per_epoch)
 		if self.babysitter is not None: self.babysitter.flush(batches=batch, epochs=batch / self._batches_per_epoch)
-
-	def _on_epoch_end(self, epoch):
-		pass
-
-	def _on_training_end(self):
-		pass
 
 	def _gradient_callback(self, batch):
 		if self.babysitter is not None: self.babysitter.append(self.models, batches=batch, epochs=batch / self._batches_per_epoch)
@@ -270,7 +257,7 @@ class SupervisedTrainer(Trainer):
 
 		if training:
 			loss.backward()
-			self._gradient_callback(batch)
+			self.callbacks(TrainingPhases.GRADIENT)
 			optimizer.step()
 			optimizer.zero_grad()
 
@@ -307,3 +294,12 @@ class ClassifierTrainer(SupervisedTrainer):
 		from torch import nn
 
 		super().__init__(model, data, nn.CrossEntropyLoss(), optimizer, metrics='accuracy', save_path=save_path)
+
+class TrainingPhases(Enum):
+	ON_TRAINING_START = 0
+	ON_EPOCH_START = 1
+	ON_BATCH_START = 2
+	GRADIENT = 3
+	ON_BATCH_END = 4
+	ON_EPOCH_END = 5
+	ON_TRAINING_END = 6
