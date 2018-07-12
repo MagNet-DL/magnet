@@ -115,10 +115,13 @@ class DataLoader(DataLoaderPyTorch):
 		self.sampler.pos = state_dict['pos']
 
 	def compatible_with(self, dataloader):
-		return self.batch_size == dataloader.batch_size and self.sampler.shuffle == dataloader.sampler.shuffle and self.sampler.replace == dataloader.sampler.replace
+		return self.batch_size == dataloader.batch_size and self.sampler.shuffle == dataloader.sampler.shuffle and self.sampler.replace == dataloader.sampler.replace and self.sampler.sample_space == dataloader.sampler.sample_space
 
 	def __next__(self):
 		return next(iter(self))
+
+	def __len__(self):
+		return int(len(self.sampler.indices) // self.batch_size)
 
 class Data:
 	def __init__(self, path=None, **kwargs):
