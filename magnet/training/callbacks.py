@@ -52,7 +52,7 @@ class CallbackQueue(list):
 		raise RuntimeError('Multiple callbacks with the same name found!')
 
 	def exists(self, name):
-		return self.find(callback.name) is not None
+		return self.find(name) is not None
 
 	def __call__(self, signal, *args, **kwargs):
 		for callback in self: callback(*args, **kwargs, signal=signal)

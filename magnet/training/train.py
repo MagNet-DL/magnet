@@ -99,10 +99,8 @@ class Trainer:
 		for self.iterations in range(start_iteration, self.iterations + total_iterations):
 			is_last_batch = (self.iterations == start_iteration + total_iterations - 1)
 
-			try:
-				if not self.iterations % self._batches_per_epoch:
-					self.callbacks('on_epoch_start', trainer=self)
-			except AttributeError: pass
+			if self.epochs.is_integer(): self.callbacks('on_epoch_start', trainer=self)
+
 
 			self.callbacks('on_batch_start', trainer=self)
 
@@ -113,10 +111,7 @@ class Trainer:
 
 			self.callbacks('on_batch_end', trainer=self)
 
-			try:
-				if not (self.iterations + 1) % self._batches_per_epoch:
-					self.callbacks('on_epoch_end', trainer=self)
-			except AttributeError: pass
+			if ((self.iterations + 1) / len(self.dataloader['train'])).is_integer(): self.callbacks('on_epoch_end', trainer=self)
 
 			if save_interval is not None and (is_last_batch or ((time() - start_time > save_interval) and self.iterations != 0)):
 				self._save(dataloader)
