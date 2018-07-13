@@ -62,20 +62,16 @@ class Validate:
 
 	def __call__(self, trainer, signal, **kwargs):
 		if signal == 'on_training_start':
-			self.start_iteration = trainer.iterations
-			self.total_iterations = kwargs.pop('total_iterations')
 			if self.batches is None: self.batches = int(len(self.dataloader) // self.frequency)
 
 		elif signal == 'on_batch_end':
-			batches_per_epoch = len(trainer.dataloader)
-			not_last_iteration = trainer.iterations != self.start_iteration + self.total_iterations - 1
-
 			if trainer.iterations == 0: return
-			if trainer.iterations % int(batches_per_epoch // self.frequency): return
-			if not_last_iteration and self.drop_last: return
 
-			with mag.eval(*trainer.models):
-				for _ in range(self.batches): trainer.validate(self.dataloader)
+			batches_per_epoch = len(trainer.dataloader)
+			if not trainer.iterations % int(batches_per_epoch // self.frequency): self.validate(trainer)
+
+		elif signal == 'on_training_end':
+			if not self.drop_last: self.validate(trainer)
 
 		elif signal == 'load':
 			from magnet.training.utils import load_object
@@ -85,6 +81,10 @@ class Validate:
 		elif signal == 'save':
 			from magnet.training.utils import save_object
 			save_object(self.dataloader.state_dict(), kwargs.pop('path') / self.name / 'dataloader.p')
+
+	def validate(self, trainer):
+		with mag.eval(*trainer.models):
+				for _ in range(self.batches): trainer.validate(self.dataloader)
 
 class Checkpoint:
 	def __init__(self, path, interval='5 m', **kwargs):
@@ -102,22 +102,18 @@ class Checkpoint:
 	def __call__(self, trainer, signal, **kwargs):
 		if signal == 'on_training_start':
 			self.path.mkdir(parents=True, exist_ok=True)
-
 			trainer.load(self.path)
-
-			self.start_iteration = trainer.iterations
-			self.total_iterations = kwargs.pop('total_iterations')
 			self.start_time = time()
 
 		elif signal == 'on_batch_end':
-			batches_per_epoch = len(trainer.dataloader)
-			not_last_iteration = trainer.iterations != self.start_iteration + self.total_iterations - 1
-
 			if trainer.iterations == 0: return
-			if not_last_iteration and (time() - self.start_time < self.interval): return
 
+			if time() - self.start_time > self.interval:
+				trainer.save(self.path)
+				self.start_time = time()
+
+		elif signal == 'on_training_end':
 			trainer.save(self.path)
-			self.start_time = time()
 
 		elif signal == 'load':
 			from magnet.training.utils import load_object

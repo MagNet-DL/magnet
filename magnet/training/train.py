@@ -104,7 +104,7 @@ class Trainer:
 		state_dict = load_object(path / 'state.p', default={})
 		for attr, val in state_dict.items(): setattr(self, attr, val)
 
-		self.callbacks('load', trainer=self, path=path)
+		self.callbacks('load', trainer=self, path=path / 'callbacks')
 
 		if self.babysitter is not None: self.babysitter.load(save_path)
 
@@ -117,7 +117,7 @@ class Trainer:
 		state_dict = {attr: getattr(self, attr) for attr in ('iterations', ) if hasattr(self, attr)}
 		save_object(state_dict, path / 'state.p')
 
-		self.callbacks('save', trainer=self, path=path)
+		self.callbacks('save', trainer=self, path=path / 'callbacks')
 
 		if self.babysitter is not None: self.babysitter.save(save_path)
 
