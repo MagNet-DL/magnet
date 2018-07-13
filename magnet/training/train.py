@@ -5,7 +5,7 @@ class Trainer:
 	def __init__(self, models, data, losses=None, optimizers=['adam'], metrics=None, save_path=None):
 		from magnet.training import metrics as metrics_module
 		from magnet.training.history import History
-		from magnet.training.callbacks import CallbackQueue, Monitor
+		from magnet.training.callbacks import CallbackQueue, Monitor, Validate
 
 		from pathlib import Path
 		from torch import optim
@@ -23,17 +23,17 @@ class Trainer:
 
 		self.babysitter = None
 		self.iterations = 0
-		self.callbacks = CallbackQueue([Monitor()])
+		self.callbacks = CallbackQueue([Validate(), Monitor()])
 
 		if save_path is not None:
 			self.save_path = Path(save_path)
 			self.save_path.mkdir(parents=True, exist_ok=True)
 			self._load()
 
-	def _optimize(self, dataloader, batch):
+	def optimize(self, training):
 		raise NotImplementedError
 
-	def _validate(self, dataloader, validation_batches):
+	def validate(self):
 		pass
 
 	def train(self, epochs=1, batch_size=1, shuffle=True, **kwargs):
@@ -45,13 +45,10 @@ class Trainer:
 		start_time = time()
 
 		save_interval = kwargs.get('save_interval', '5 m')
-		monitor_freq = kwargs.get('monitor_freq', 10)
-		validate_freq = kwargs.get('validate_freq', monitor_freq)
 		batch_size_val = kwargs.get('batch_size_val', batch_size)
 		shuffle_val = kwargs.get('shuffle_val', False)
 		cold_start = kwargs.get('cold_start', False) and not hasattr(self, '_iterations')
 		training = kwargs.get('training', True)
-		monitor_finally = kwargs.get('monitor_finally', True)
 		self.babysitter = kwargs.pop('babysitter', None)
 
 		if isinstance(self.data, data_module.Data):
@@ -73,8 +70,6 @@ class Trainer:
 					self.dataloader[k] = v
 			else:
 				self.dataloader = {k: v}
-
-		validation_batches=kwargs.get('validation_batches', int(len(dataloader['val']) // validate_freq))
 
 		batches_per_epoch = len(dataloader['train'])
 
@@ -99,19 +94,11 @@ class Trainer:
 		for self.iterations in range(start_iteration, self.iterations + total_iterations):
 			is_last_batch = (self.iterations == start_iteration + total_iterations - 1)
 
-			if self.epochs.is_integer(): self.callbacks('on_epoch_start', trainer=self)
-
-
 			self.callbacks('on_batch_start', trainer=self)
 
-			self._optimize(dataloader['train'], self.iterations, training)
-
-			if (is_last_batch and monitor_finally) or (not self.iterations % int(batches_per_epoch // validate_freq) and self.iterations != 0):
-				with mag.eval(*self.models): self._validate(dataloader['val'], validation_batches)
+			self.optimize(training)
 
 			self.callbacks('on_batch_end', trainer=self)
-
-			if ((self.iterations + 1) / len(self.dataloader['train'])).is_integer(): self.callbacks('on_epoch_end', trainer=self)
 
 			if save_interval is not None and (is_last_batch or ((time() - start_time > save_interval) and self.iterations != 0)):
 				self._save(dataloader)
@@ -152,9 +139,13 @@ class Trainer:
 				_log = log if log is not None else False
 				self.history.show(k, log=_log, x_key=vs, xlabel=xlabel)
 
-	@property
-	def epochs(self):
-		return self.iterations / len(self.dataloader['train'])
+	def epochs(self, mode=None):
+		if mode is None:
+			return self.iterations / len(self.dataloader['train'])
+		if mode == 'start':
+			return (self.iterations / len(self.dataloader['train'])).is_integer()
+		if mode == 'end':
+			return ((self.iterations + 1) / len(self.dataloader['train'])).is_integer()
 
 	def _gradient_callback(self, batch):
 		if self.babysitter is not None: self.babysitter.append(self.models, batches=batch, epochs=batch / self._batches_per_epoch)
@@ -232,10 +223,10 @@ class SupervisedTrainer(Trainer):
 	def __init__(self, model, data, loss=None, optimizer='adam', metrics=None, save_path=None):
 		super().__init__([model], data, [loss], [optimizer], metrics, save_path)
 
-	def _optimize(self, dataloader, batch, training):
+	def optimize(self, training):
 		model = self.models[0]; optimizer = self._optimizers[0]
 
-		loss = self._get_loss(dataloader)
+		loss = self._get_loss()
 
 		if training:
 			loss.backward()
@@ -243,13 +234,15 @@ class SupervisedTrainer(Trainer):
 			optimizer.step()
 			optimizer.zero_grad()
 
-	def _validate(self, dataloader, validation_batches):
-		for _ in range(validation_batches): self._get_loss(dataloader, validation=True)
+	def validate(self):
+		self._get_loss(validation=True)
 
-	def _get_loss(self, dataloader, validation=False):
+	def _get_loss(self, validation=False):
 		model = self.models[0]; loss_fn = self._losses[0]
 
-		x, y = next(dataloader)
+		mode = 'val' if validation else 'train'
+
+		x, y = next(self.dataloader[mode])
 		y_pred = model(x)
 
 		loss = loss_fn(y_pred, y)
