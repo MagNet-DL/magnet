@@ -25,7 +25,7 @@ class Monitor:
 				self.progress_bar.update()
 				self.progress_bar.refresh()
 
-		elif signal == 'before_optimization':
+		elif signal == 'write_metrics':
 			self.history.append(**kwargs)
 
 		elif signal == 'on_batch_end':

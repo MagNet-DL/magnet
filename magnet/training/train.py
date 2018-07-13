@@ -149,9 +149,9 @@ class SupervisedTrainer(Trainer):
 
 		loss = loss_fn(y_pred, y)
 
-		self.callbacks('before_optimization', trainer=self, key='loss', value=loss.item(), validation=validation, buffer=True)
+		self.callbacks('write_metrics', trainer=self, key='loss', value=loss.item(), validation=validation, buffer=True)
 		for k in self._metrics.keys():
-			self.callbacks('before_optimization', trainer=self, key=k, value=self._metrics[k](y_pred, y).item(), validation=validation, buffer=True)
+			self.callbacks('write_metrics', trainer=self, key=k, value=self._metrics[k](y_pred, y).item(), validation=validation, buffer=True)
 
 		return loss
 
