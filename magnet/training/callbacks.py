@@ -1,10 +1,10 @@
 import magnet as mag
 
 class Monitor:
-	def __init__(self, name='monitor', frequency=10, show_progress=True):
+	def __init__(self, frequency=10, show_progress=True, **kwargs):
 		from magnet.training.history import History
 
-		self.name = name
+		self.name = kwargs.pop('name', 'monitor')
 		self.frequency = frequency
 		self.show_progress = show_progress
 
@@ -14,10 +14,9 @@ class Monitor:
 		if signal == 'on_training_start':
 			from magnet._utils import get_tqdm; tqdm = get_tqdm()
 
-			self.history.buffer_size = trainer.dataloader['train'].buffer_size
-			self.history.val_buffer_size = trainer.dataloader['val'].buffer_size
+			self.history.buffer_size = trainer.dataloader.buffer_size
 
-			self.progress_bar = tqdm(total=kwargs.pop('total_iterations'), unit_scale=True, unit_divisor=len(trainer.dataloader['train']), leave=False) if self.show_progress else None
+			self.progress_bar = tqdm(total=kwargs.pop('total_iterations'), unit_scale=True, unit_divisor=len(trainer.dataloader), leave=False) if self.show_progress else None
 
 		elif signal == 'on_batch_start':
 			if self.show_progress:
@@ -30,7 +29,7 @@ class Monitor:
 		elif signal == 'on_batch_end':
 			if trainer.iterations == 0: return
 
-			batches_per_epoch = len(trainer.dataloader['train'])
+			batches_per_epoch = len(trainer.dataloader)
 			if trainer.iterations % int(batches_per_epoch // self.frequency): return
 
 			self.history.flush(iterations=trainer.iterations, epochs=trainer.epochs())
@@ -44,8 +43,9 @@ class Monitor:
 				self.progress_bar = None
 
 class Validate:
-	def __init__(self, name='validate', frequency=10, batches=None, drop_last=False):
-		self.name = name
+	def __init__(self, dataloader, frequency=10, batches=None, drop_last=False, **kwargs):
+		self.name = kwargs.pop('name', 'validate')
+		self.dataloader = dataloader
 		self.frequency = frequency
 		self.batches = batches
 		self.drop_last = drop_last
@@ -54,10 +54,10 @@ class Validate:
 		if signal == 'on_training_start':
 			self.start_iteration = trainer.iterations
 			self.total_iterations = kwargs.pop('total_iterations')
-			if self.batches is None: self.batches = int(len(trainer.dataloader['val']) // self.frequency)
+			if self.batches is None: self.batches = int(len(self.dataloader) // self.frequency)
 
 		if signal == 'on_batch_end':
-			batches_per_epoch = len(trainer.dataloader['train'])
+			batches_per_epoch = len(trainer.dataloader)
 			not_last_iteration = trainer.iterations != self.start_iteration + self.total_iterations - 1
 
 			if trainer.iterations == 0: return
@@ -65,7 +65,7 @@ class Validate:
 			if not_last_iteration and self.drop_last: return
 
 			with mag.eval(*trainer.models):
-				for _ in range(self.batches): trainer.validate()
+				for _ in range(self.batches): trainer.validate(self.dataloader)
 
 class CallbackQueue(list):
 	def append(self, callback):

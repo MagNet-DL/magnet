@@ -2,17 +2,15 @@ import magnet as mag
 from contextlib import contextmanager
 
 class Trainer:
-	def __init__(self, models, data, losses=None, optimizers=['adam'], metrics=None, save_path=None):
+	def __init__(self, models, losses=None, optimizers=['adam'], metrics=None, save_path=None):
 		from magnet.training import metrics as metrics_module
 		from magnet.training.history import History
-		from magnet.training.callbacks import CallbackQueue, Monitor, Validate
 
 		from pathlib import Path
 		from torch import optim
 
 		self.models = models
-		self.data = data
-		self._losses = losses
+		self.losses = losses
 		if optimizers[0] == 'adam': optimizers = [optim.Adam(model.parameters(), amsgrad=True) for model in models]
 		self._optimizers = optimizers
 		self._metrics = {metrics: getattr(metrics_module, metrics.lower())} if metrics is not None else {}
@@ -23,55 +21,37 @@ class Trainer:
 
 		self.babysitter = None
 		self.iterations = 0
-		self.callbacks = CallbackQueue([Validate(), Monitor()])
 
 		if save_path is not None:
 			self.save_path = Path(save_path)
 			self.save_path.mkdir(parents=True, exist_ok=True)
 			self._load()
 
-	def optimize(self, training):
+	def optimize(self):
 		raise NotImplementedError
 
-	def validate(self):
+	def validate(self, dataloader):
 		pass
 
-	def train(self, epochs=1, batch_size=1, shuffle=True, **kwargs):
+	def train(self, dataloader, epochs=1, callbacks=[], **kwargs):
 		import torch
-		from magnet._utils import get_tqdm; tqdm = get_tqdm()
 		from magnet import data as data_module
 		from time import time
+		from magnet.training.callbacks import CallbackQueue
 
 		start_time = time()
 
+		self.dataloader = dataloader
+		self.callbacks = CallbackQueue(callbacks)
+
 		save_interval = kwargs.get('save_interval', '5 m')
-		batch_size_val = kwargs.get('batch_size_val', batch_size)
-		shuffle_val = kwargs.get('shuffle_val', False)
 		cold_start = kwargs.get('cold_start', False) and not hasattr(self, '_iterations')
-		training = kwargs.get('training', True)
+		self.training = kwargs.get('training', True)
 		self.babysitter = kwargs.pop('babysitter', None)
 
-		if isinstance(self.data, data_module.Data):
-			dataloader = {'train': self.data(batch_size, shuffle)}
+		if self.save_path is not None: dataloader.load_state_dict(self.save_path / 'dl_train.p')
 
-			if batch_size_val < 0: batch_size_val = batch_size
-			dataloader['val'] = self.data(batch_size_val, shuffle=shuffle_val, mode='val')
-		else:
-			dataloader = {'train': self.data[0], 'val': self.data[1]}
-		if self.save_path is not None:
-			dataloader['train'].load_state_dict(self.save_path / 'dl_train.p')
-			dataloader['val'].load_state_dict(self.save_path / 'dl_val.p')
-
-		for k, v in dataloader.items():
-			if hasattr(self, 'dataloader'):
-				if k in self.dataloader.keys() and v.compatible_with(self.dataloader[k]):
-					dataloader[k] = self.dataloader[k]
-				else:
-					self.dataloader[k] = v
-			else:
-				self.dataloader = {k: v}
-
-		batches_per_epoch = len(dataloader['train'])
+		batches_per_epoch = len(self.dataloader)
 
 		total_iterations = kwargs.get('iterations', int(epochs * batches_per_epoch))
 
@@ -96,7 +76,7 @@ class Trainer:
 
 			self.callbacks('on_batch_start', trainer=self)
 
-			self.optimize(training)
+			self.optimize()
 
 			self.callbacks('on_batch_end', trainer=self)
 
@@ -141,11 +121,11 @@ class Trainer:
 
 	def epochs(self, mode=None):
 		if mode is None:
-			return self.iterations / len(self.dataloader['train'])
+			return self.iterations / len(self.dataloader)
 		if mode == 'start':
-			return (self.iterations / len(self.dataloader['train'])).is_integer()
+			return (self.iterations / len(self.dataloader)).is_integer()
 		if mode == 'end':
-			return ((self.iterations + 1) / len(self.dataloader['train'])).is_integer()
+			return ((self.iterations + 1) / len(self.dataloader)).is_integer()
 
 	def _gradient_callback(self, batch):
 		if self.babysitter is not None: self.babysitter.append(self.models, batches=batch, epochs=batch / self._batches_per_epoch)
@@ -220,29 +200,29 @@ class Trainer:
 			shutil.rmtree(save_path)
 
 class SupervisedTrainer(Trainer):
-	def __init__(self, model, data, loss=None, optimizer='adam', metrics=None, save_path=None):
-		super().__init__([model], data, [loss], [optimizer], metrics, save_path)
+	def __init__(self, model, loss=None, optimizer='adam', metrics=None, save_path=None):
+		super().__init__([model], [loss], [optimizer], metrics, save_path)
 
-	def optimize(self, training):
+	def optimize(self):
 		model = self.models[0]; optimizer = self._optimizers[0]
 
-		loss = self._get_loss()
+		loss = self._get_loss(self.dataloader)
 
-		if training:
+		if self.training:
 			loss.backward()
 			self.callbacks('gradient', trainer=self, models=[model])
 			optimizer.step()
 			optimizer.zero_grad()
 
-	def validate(self):
-		self._get_loss(validation=True)
+	def validate(self, dataloader):
+		self._get_loss(dataloader, validation=True)
 
-	def _get_loss(self, validation=False):
-		model = self.models[0]; loss_fn = self._losses[0]
+	def _get_loss(self, dataloader, validation=False):
+		model = self.models[0]; loss_fn = self.losses[0]
 
 		mode = 'val' if validation else 'train'
 
-		x, y = next(self.dataloader[mode])
+		x, y = next(dataloader)
 		y_pred = model(x)
 
 		loss = loss_fn(y_pred, y)
@@ -254,7 +234,7 @@ class SupervisedTrainer(Trainer):
 		return loss
 
 class ClassifierTrainer(SupervisedTrainer):
-	def __init__(self, model, data, optimizer='adam', save_path=None):
+	def __init__(self, model, optimizer='adam', save_path=None):
 		from torch import nn
 
-		super().__init__(model, data, nn.CrossEntropyLoss(), optimizer, metrics='accuracy', save_path=save_path)
+		super().__init__(model, nn.CrossEntropyLoss(), optimizer, metrics='accuracy', save_path=save_path)
