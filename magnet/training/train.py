@@ -1,12 +1,11 @@
 import magnet as mag
 from contextlib import contextmanager
-from enum import Enum
 
 class Trainer:
 	def __init__(self, models, data, losses=None, optimizers=['adam'], metrics=None, save_path=None):
 		from magnet.training import metrics as metrics_module
 		from magnet.training.history import History
-		from magnet.training.callback import Callbacks
+		from magnet.training.callbacks import CallbackQueue, Monitor
 
 		from pathlib import Path
 		from torch import optim
@@ -23,9 +22,8 @@ class Trainer:
 		self.save_path = save_path
 
 		self.babysitter = None
-		self._iterations = -1
-		self.callbacks = Callbacks('on_training_start', 'on_epoch_start', 'on_batch_start',
-									'gradient', 'on_batch_end', 'on_training_end')
+		self.iterations = 0
+		self.callbacks = CallbackQueue([Monitor()])
 
 		if save_path is not None:
 			self.save_path = Path(save_path)
@@ -68,36 +66,27 @@ class Trainer:
 			dataloader['val'].load_state_dict(self.save_path / 'dl_val.p')
 
 		for k, v in dataloader.items():
-			if hasattr(self, '_dataloader'):
-				if k in self._dataloader.keys() and v.compatible_with(self._dataloader[k]):
-					dataloader[k] = self._dataloader[k]
+			if hasattr(self, 'dataloader'):
+				if k in self.dataloader.keys() and v.compatible_with(self.dataloader[k]):
+					dataloader[k] = self.dataloader[k]
 				else:
-					self._dataloader[k] = v
+					self.dataloader[k] = v
 			else:
-				self._dataloader = {k: v}
+				self.dataloader = {k: v}
 
 		validation_batches=kwargs.get('validation_batches', int(len(dataloader['val']) // validate_freq))
 
-		self._batches_per_epoch = len(dataloader['train'])
+		batches_per_epoch = len(dataloader['train'])
 
-		iterations = kwargs.get('iterations', int(epochs * self._batches_per_epoch))
+		total_iterations = kwargs.get('iterations', int(epochs * batches_per_epoch))
 
 		if cold_start:
 			_kwargs = {k: v for k, v in kwargs.items() if k not in ('iterations', 'cold_start', 'training', 'monitor_finally')}
 			with mag.eval(*self.models):
-				self.train(epochs, batch_size, shuffle, iterations=int(self._batches_per_epoch // monitor_freq) + 1,
+				self.train(epochs, batch_size, shuffle, iterations=int(batches_per_epoch // monitor_freq) + 1,
 							cold_start=False, training=False, monitor_finally=False, **_kwargs)
 
-		self.history.buffer_size = kwargs.get('buffer_size', self._batches_per_epoch)
-		self.history.val_buffer_size = kwargs.get('val_buffer_size', len(dataloader['val']))
-
-		try: start_iteration = self._iterations + 1
-		except AttributeError: start_iteration = self._iterations = 0
-
-		progress_bar = tqdm(range(start_iteration, start_iteration + iterations), unit_scale=True,
-							unit_divisor=self._batches_per_epoch, leave=False)
-
-		self.callbacks('on_training_start', self)
+		self.callbacks('on_training_start', trainer=self, total_iterations=total_iterations)
 
 		if save_interval is not None:
 			save_interval, _save_multiplier = save_interval.split(' ')
@@ -106,36 +95,34 @@ class Trainer:
 			_save_multiplier = _save_multiplier_dict[_save_multiplier]
 			save_interval *= _save_multiplier
 
-		for batch in progress_bar:
-			is_last_batch = (batch == start_iteration + iterations - 1)
+		start_iteration = self.iterations
+		for self.iterations in range(start_iteration, self.iterations + total_iterations):
+			is_last_batch = (self.iterations == start_iteration + total_iterations - 1)
 
 			try:
-				if not batch % self._batches_per_epoch:
-					self.callbacks('on_epoch_start', self)
+				if not self.iterations % self._batches_per_epoch:
+					self.callbacks('on_epoch_start', trainer=self)
 			except AttributeError: pass
 
-			self.callbacks('on_batch_start', self)
+			self.callbacks('on_batch_start', trainer=self)
 
-			self._optimize(dataloader['train'], batch, training)
+			self._optimize(dataloader['train'], self.iterations, training)
 
-			self.callbacks('on_batch_end', self)
-
-			if (is_last_batch and monitor_finally) or (not batch % int(self._batches_per_epoch // validate_freq) and batch != 0):
+			if (is_last_batch and monitor_finally) or (not self.iterations % int(batches_per_epoch // validate_freq) and self.iterations != 0):
 				with mag.eval(*self.models): self._validate(dataloader['val'], validation_batches)
 
-			if not batch % int(self._batches_per_epoch // monitor_freq) and batch != 0:
-				self._monitor(batch, progress_bar=progress_bar)
+			self.callbacks('on_batch_end', trainer=self)
 
 			try:
-				if not (batch + 1) % self._batches_per_epoch:
-					self.callbacks('on_epoch_end', self)
+				if not (self.iterations + 1) % self._batches_per_epoch:
+					self.callbacks('on_epoch_end', trainer=self)
 			except AttributeError: pass
 
-			if save_interval is not None and (is_last_batch or ((time() - start_time > save_interval) and batch != 0)):
+			if save_interval is not None and (is_last_batch or ((time() - start_time > save_interval) and self.iterations != 0)):
 				self._save(dataloader)
 				start_time = time()
 
-		self.callbacks('on_training_end', self)
+		self.callbacks('on_training_end', trainer=self)
 
 	@contextmanager
 	def mock(self):
@@ -170,10 +157,9 @@ class Trainer:
 				_log = log if log is not None else False
 				self.history.show(k, log=_log, x_key=vs, xlabel=xlabel)
 
-	def _monitor(self, batch, **kwargs):
-		self._iterations = batch
-		self.history.flush(batches=batch, epochs=batch / self._batches_per_epoch)
-		if self.babysitter is not None: self.babysitter.flush(batches=batch, epochs=batch / self._batches_per_epoch)
+	@property
+	def epochs(self):
+		return self.iterations / len(self.dataloader['train'])
 
 	def _gradient_callback(self, batch):
 		if self.babysitter is not None: self.babysitter.append(self.models, batches=batch, epochs=batch / self._batches_per_epoch)
@@ -258,7 +244,7 @@ class SupervisedTrainer(Trainer):
 
 		if training:
 			loss.backward()
-			self.callbacks('gradient', self)
+			self.callbacks('gradient', trainer=self, models=[model])
 			optimizer.step()
 			optimizer.zero_grad()
 
@@ -273,22 +259,11 @@ class SupervisedTrainer(Trainer):
 
 		loss = loss_fn(y_pred, y)
 
-		self.history.append('loss', loss.item(), validation=validation, buffer=True)
+		self.callbacks('before_optimization', trainer=self, key='loss', value=loss.item(), validation=validation, buffer=True)
 		for k in self._metrics.keys():
-			self.history.append(k, self._metrics[k](y_pred, y).item(), validation=validation, buffer=True)
+			self.callbacks('before_optimization', trainer=self, key=k, value=self._metrics[k](y_pred, y).item(), validation=validation, buffer=True)
 
 		return loss
-
-	def _monitor(self, batch, **kwargs):
-		super()._monitor(batch, **kwargs)
-		progress_bar = kwargs.pop('progress_bar')
-
-		loss = self.history['loss'][-1];
-		try:
-			val_loss = self.history['val_loss'][-1]
-			progress_bar.set_description(f'{loss:.2f}, {val_loss:.2f}', refresh=False)
-		except KeyError:
-			progress_bar.set_description(f'{loss:.2f}', refresh=False)
 
 class ClassifierTrainer(SupervisedTrainer):
 	def __init__(self, model, data, optimizer='adam', save_path=None):
