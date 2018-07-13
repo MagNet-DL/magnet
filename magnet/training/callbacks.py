@@ -1,5 +1,7 @@
 import magnet as mag
 
+from time import time
+
 class Monitor:
 	def __init__(self, frequency=10, show_progress=True, **kwargs):
 		from magnet.training.history import History
@@ -42,6 +44,14 @@ class Monitor:
 				self.progress_bar.close()
 				self.progress_bar = None
 
+		elif signal == 'load':
+			from magnet.training.utils import load_object
+			self.history = load_object(kwargs.pop('path') / self.name / 'history.p', default=self.history)
+
+		elif signal == 'save':
+			from magnet.training.utils import save_object
+			save_object(self.history, kwargs.pop('path') / self.name / 'history.p')
+
 class Validate:
 	def __init__(self, dataloader, frequency=10, batches=None, drop_last=False, **kwargs):
 		self.name = kwargs.pop('name', 'validate')
@@ -56,7 +66,7 @@ class Validate:
 			self.total_iterations = kwargs.pop('total_iterations')
 			if self.batches is None: self.batches = int(len(self.dataloader) // self.frequency)
 
-		if signal == 'on_batch_end':
+		elif signal == 'on_batch_end':
 			batches_per_epoch = len(trainer.dataloader)
 			not_last_iteration = trainer.iterations != self.start_iteration + self.total_iterations - 1
 
@@ -66,6 +76,61 @@ class Validate:
 
 			with mag.eval(*trainer.models):
 				for _ in range(self.batches): trainer.validate(self.dataloader)
+
+		elif signal == 'load':
+			from magnet.training.utils import load_object
+			state_dict = load_object(kwargs.pop('path') / self.name / 'dataloader.p', default=None)
+			if state_dict is not None: self.dataloader.load_state_dict(state_dict)
+
+		elif signal == 'save':
+			from magnet.training.utils import save_object
+			save_object(self.dataloader.state_dict(), kwargs.pop('path') / self.name / 'dataloader.p')
+
+class Checkpoint:
+	def __init__(self, path, interval='5 m', **kwargs):
+		self.name = kwargs.pop('name', 'validate')
+		self.path = path
+		self.interval = self.parse_duration(interval)
+
+	def parse_duration(self, interval):
+		interval, multiplier = interval.split(' ')
+		interval = float(interval); multiplier = multiplier.lower()
+		multiplier_dict = {'m': 60, 's': 1, 'h': 3600, 'ms': 1e-3, 'us': 1e-6, 'd': 24 * 3600}
+		multiplier = multiplier_dict[multiplier]
+		return interval * multiplier
+
+	def __call__(self, trainer, signal, **kwargs):
+		if signal == 'on_training_start':
+			self.path.mkdir(parents=True, exist_ok=True)
+
+			trainer.load(self.path)
+
+			self.start_iteration = trainer.iterations
+			self.total_iterations = kwargs.pop('total_iterations')
+			self.start_time = time()
+
+		elif signal == 'on_batch_end':
+			batches_per_epoch = len(trainer.dataloader)
+			not_last_iteration = trainer.iterations != self.start_iteration + self.total_iterations - 1
+
+			if trainer.iterations == 0: return
+			if not_last_iteration and (time() - self.start_time < self.interval): return
+
+			trainer.save(self.path)
+			self.start_time = time()
+
+		elif signal == 'load':
+			from magnet.training.utils import load_object
+			state_dict = load_object(kwargs.pop('path') / self.name / 'dataloader.p', default=None)
+			if state_dict is not None: trainer.dataloader.load_state_dict(state_dict)
+
+		elif signal == 'save':
+			from magnet.training.utils import save_object
+			save_object(trainer.dataloader.state_dict(), kwargs.pop('path') / self.name / 'dataloader.p')
+
+	def clear(self):
+		from shutil import rmtree
+		rmtree(self.path)
 
 class CallbackQueue(list):
 	def append(self, callback):

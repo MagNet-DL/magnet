@@ -2,11 +2,9 @@ import magnet as mag
 from contextlib import contextmanager
 
 class Trainer:
-	def __init__(self, models, losses=None, optimizers=['adam'], metrics=None, save_path=None):
+	def __init__(self, models, losses=None, optimizers=['adam'], metrics=None):
 		from magnet.training import metrics as metrics_module
-		from magnet.training.history import History
 
-		from pathlib import Path
 		from torch import optim
 
 		self.models = models
@@ -15,17 +13,8 @@ class Trainer:
 		self._optimizers = optimizers
 		self._metrics = {metrics: getattr(metrics_module, metrics.lower())} if metrics is not None else {}
 
-		self.history = History()
-
-		self.save_path = save_path
-
 		self.babysitter = None
 		self.iterations = 0
-
-		if save_path is not None:
-			self.save_path = Path(save_path)
-			self.save_path.mkdir(parents=True, exist_ok=True)
-			self._load()
 
 	def optimize(self):
 		raise NotImplementedError
@@ -34,22 +23,14 @@ class Trainer:
 		pass
 
 	def train(self, dataloader, epochs=1, callbacks=[], **kwargs):
-		import torch
-		from magnet import data as data_module
-		from time import time
 		from magnet.training.callbacks import CallbackQueue
-
-		start_time = time()
 
 		self.dataloader = dataloader
 		self.callbacks = CallbackQueue(callbacks)
 
-		save_interval = kwargs.get('save_interval', '5 m')
 		cold_start = kwargs.get('cold_start', False) and not hasattr(self, '_iterations')
 		self.training = kwargs.get('training', True)
 		self.babysitter = kwargs.pop('babysitter', None)
-
-		if self.save_path is not None: dataloader.load_state_dict(self.save_path / 'dl_train.p')
 
 		batches_per_epoch = len(self.dataloader)
 
@@ -61,29 +42,13 @@ class Trainer:
 				self.train(epochs, batch_size, shuffle, iterations=int(batches_per_epoch // monitor_freq) + 1,
 							cold_start=False, training=False, monitor_finally=False, **_kwargs)
 
-		self.callbacks('on_training_start', trainer=self, total_iterations=total_iterations)
-
-		if save_interval is not None:
-			save_interval, _save_multiplier = save_interval.split(' ')
-			save_interval = float(save_interval); _save_multiplier = _save_multiplier.lower()
-			_save_multiplier_dict = {'m': 60, 's': 1, 'h': 3600, 'ms': 1e-3, 'us': 1e-6, 'd': 24 * 3600}
-			_save_multiplier = _save_multiplier_dict[_save_multiplier]
-			save_interval *= _save_multiplier
-
 		start_iteration = self.iterations
+
+		self.callbacks('on_training_start', trainer=self, total_iterations=total_iterations)
 		for self.iterations in range(start_iteration, self.iterations + total_iterations):
-			is_last_batch = (self.iterations == start_iteration + total_iterations - 1)
-
 			self.callbacks('on_batch_start', trainer=self)
-
 			self.optimize()
-
 			self.callbacks('on_batch_end', trainer=self)
-
-			if save_interval is not None and (is_last_batch or ((time() - start_time > save_interval) and self.iterations != 0)):
-				self._save(dataloader)
-				start_time = time()
-
 		self.callbacks('on_training_end', trainer=self)
 
 	@contextmanager
@@ -130,78 +95,35 @@ class Trainer:
 	def _gradient_callback(self, batch):
 		if self.babysitter is not None: self.babysitter.append(self.models, batches=batch, epochs=batch / self._batches_per_epoch)
 
-	def _load(self, save_path=None):
-		if save_path is None: save_path = self.save_path
-		if save_path is None: return
-		import torch, pickle
+	def load(self, path=None):
+		from magnet.training.utils import load_state, load_object
 
-		def _load_module(module, subpath, name_alternative):
-			name = name_alternative if not hasattr(module, 'name') else module.name
-			filepath = save_path / subpath / (name + '.pt')
-			if filepath.exists(): module.load_state_dict(torch.load(filepath))
+		for i, model in enumerate(self.models): load_state(model, path / 'models', alternative_name=str(i))
+		for i, optimizer in enumerate(self._optimizers): load_state(optimizer, path / 'optimizers', alternative_name=str(i))
 
-		def _load_obj(name, default=None):
-			filepath = save_path / (name + '.p')
-			if filepath.exists():
-				with open(filepath, 'rb') as f: return pickle.load(f)
-			else:
-				return default
-
-		for i, model in enumerate(self.models): _load_module(model, 'models', str(i))
-
-		for i, optimizer in enumerate(self._optimizers): _load_module(optimizer, 'optimizers', str(i))
-
-		history = _load_obj('history')
-		if history is not None: self.history = history
-
-		state_dict = _load_obj('state', {})
+		state_dict = load_object(path / 'state.p', default={})
 		for attr, val in state_dict.items(): setattr(self, attr, val)
+
+		self.callbacks('load', trainer=self, path=path)
 
 		if self.babysitter is not None: self.babysitter.load(save_path)
 
-	def _save(self, dataloader=None, save_path=None):
-		if save_path is None: save_path = self.save_path
-		if save_path is None: return
+	def save(self, path=None):
+		from magnet.training.utils import save_state, save_object
 
-		import torch, pickle
+		for i, model in enumerate(self.models): save_state(model, path / 'models', alternative_name=str(i))
+		for i, optimizer in enumerate(self._optimizers): save_state(optimizer, path / 'optimizers', alternative_name=str(i))
 
-		subpaths = ['models', 'optimizers']
-		for subpath in subpaths: (save_path / subpath).mkdir(parents=True, exist_ok=True)
+		state_dict = {attr: getattr(self, attr) for attr in ('iterations', ) if hasattr(self, attr)}
+		save_object(state_dict, path / 'state.p')
 
-		def _save_module(module, subpath, name_alternative):
-			name = name_alternative if not hasattr(module, 'name') else module.name
-			filepath = save_path / subpath / (name + '.pt')
-			torch.save(module.state_dict(), filepath)
-
-		def _save_obj(obj, name):
-			with open(save_path / (name + '.p'), 'wb') as f: pickle.dump(obj, f)
-
-		for i, model in enumerate(self.models): _save_module(model, 'models', str(i))
-
-		for i, optimizer in enumerate(self._optimizers): _save_module(optimizer, 'optimizers', str(i))
-
-		_save_obj(self.history, 'history')
-
-		state_dict = {attr: getattr(self, attr) for attr in ('_batches_per_epoch', '_iterations') if hasattr(self, attr)}
-		_save_obj(state_dict, 'state')
-
-		if dataloader is not None:
-			dataloader['train'].save_state_dict(save_path / 'dl_train.p')
-			dataloader['val'].save_state_dict(save_path / 'dl_val.p')
+		self.callbacks('save', trainer=self, path=path)
 
 		if self.babysitter is not None: self.babysitter.save(save_path)
 
-	def _clear_checkpoints(self, save_path=None):
-		if save_path is None: save_path = self.save_path
-		if save_path is None: return
-
-		if save_path.exists():
-			import shutil
-			shutil.rmtree(save_path)
-
 class SupervisedTrainer(Trainer):
-	def __init__(self, model, loss=None, optimizer='adam', metrics=None, save_path=None):
-		super().__init__([model], [loss], [optimizer], metrics, save_path)
+	def __init__(self, model, loss=None, optimizer='adam', metrics=None):
+		super().__init__([model], [loss], [optimizer], metrics)
 
 	def optimize(self):
 		model = self.models[0]; optimizer = self._optimizers[0]
@@ -234,7 +156,7 @@ class SupervisedTrainer(Trainer):
 		return loss
 
 class ClassifierTrainer(SupervisedTrainer):
-	def __init__(self, model, optimizer='adam', save_path=None):
+	def __init__(self, model, optimizer='adam'):
 		from torch import nn
 
-		super().__init__(model, nn.CrossEntropyLoss(), optimizer, metrics='accuracy', save_path=save_path)
+		super().__init__(model, nn.CrossEntropyLoss(), optimizer, metrics='accuracy')
