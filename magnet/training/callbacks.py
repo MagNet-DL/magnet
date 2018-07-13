@@ -15,7 +15,7 @@ class Monitor:
 			self.history.buffer_size = trainer.dataloader['train'].buffer_size
 			self.history.val_buffer_size = trainer.dataloader['val'].buffer_size
 
-			self.progress_bar = tqdm(total=kwargs.pop('total_iterations'), leave=False) if self.show_progress else None
+			self.progress_bar = tqdm(total=kwargs.pop('total_iterations'), unit_scale=True, unit_divisor=len(trainer.dataloader['train']), leave=False) if self.show_progress else None
 
 		elif signal == 'on_batch_start':
 			if self.show_progress:
