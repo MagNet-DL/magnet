@@ -45,12 +45,18 @@ class Monitor:
 				self.progress_bar = None
 
 		elif signal == 'load':
-			from magnet.training.utils import load_object
-			self.history = load_object(kwargs.pop('path') / self.name / 'history.p', default=self.history)
+			self.load(kwargs.pop('path'))
 
 		elif signal == 'save':
-			from magnet.training.utils import save_object
-			save_object(self.history, kwargs.pop('path') / self.name / 'history.p')
+			self.save(kwargs.pop('path'))
+
+	def load(self, path):
+		from magnet.training.utils import load_object
+		self.history = load_object(path / self.name / 'history.p', default=self.history)
+
+	def save(self, path):
+		from magnet.training.utils import save_object
+		save_object(self.history, path / self.name / 'history.p')
 
 class Validate:
 	def __init__(self, dataloader, frequency=10, batches=None, drop_last=False, **kwargs):
@@ -74,17 +80,23 @@ class Validate:
 			if not self.drop_last: self.validate(trainer)
 
 		elif signal == 'load':
-			from magnet.training.utils import load_object
-			state_dict = load_object(kwargs.pop('path') / self.name / 'dataloader.p', default=None)
-			if state_dict is not None: self.dataloader.load_state_dict(state_dict)
+			self.load(kwargs.pop('path'))
 
 		elif signal == 'save':
-			from magnet.training.utils import save_object
-			save_object(self.dataloader.state_dict(), kwargs.pop('path') / self.name / 'dataloader.p')
+			self.save(kwargs.pop('path'))
 
 	def validate(self, trainer):
 		with mag.eval(*trainer.models):
 				for _ in range(self.batches): trainer.validate(self.dataloader)
+
+	def load(self, path):
+		from magnet.training.utils import load_object
+		state_dict = load_object(path / self.name / 'dataloader.p', default=None)
+		if state_dict is not None: self.dataloader.load_state_dict(state_dict)
+
+	def save(self, path):
+		from magnet.training.utils import save_object
+		save_object(self.dataloader.state_dict(), path / self.name / 'dataloader.p')
 
 class Checkpoint:
 	def __init__(self, path, interval='5 m', **kwargs):
@@ -116,17 +128,23 @@ class Checkpoint:
 			trainer.save(self.path)
 
 		elif signal == 'load':
-			from magnet.training.utils import load_object
-			state_dict = load_object(kwargs.pop('path') / self.name / 'dataloader.p', default=None)
-			if state_dict is not None: trainer.dataloader.load_state_dict(state_dict)
+			self.load(kwargs.pop('path'))
 
 		elif signal == 'save':
-			from magnet.training.utils import save_object
-			save_object(trainer.dataloader.state_dict(), kwargs.pop('path') / self.name / 'dataloader.p')
+			self.save(kwargs.pop('path'))
 
 	def clear(self):
 		from shutil import rmtree
 		rmtree(self.path)
+
+	def load(self, path):
+		from magnet.training.utils import load_object
+		state_dict = load_object(path / self.name / 'dataloader.p', default=None)
+		if state_dict is not None: trainer.dataloader.load_state_dict(state_dict)
+
+	def save(self, path):
+		from magnet.training.utils import save_object
+		save_object(trainer.dataloader.state_dict(), path / self.name / 'dataloader.p')
 
 class CallbackQueue(list):
 	def append(self, callback):
