@@ -18,7 +18,9 @@ class Monitor:
 
 			self.history.buffer_size = trainer.dataloader.buffer_size
 
-			self.progress_bar = tqdm(total=kwargs.pop('total_iterations'), unit_scale=True, unit_divisor=len(trainer.dataloader), leave=False) if self.show_progress else None
+			if self.show_progress:
+				self.progress_bar = tqdm(total=kwargs.pop('total_iterations'), unit_scale=True,
+										unit_divisor=len(trainer.dataloader), leave=False)
 
 		elif signal == 'on_batch_start':
 			if self.show_progress:
@@ -28,21 +30,23 @@ class Monitor:
 		elif signal == 'write_metrics':
 			self.history.append(**kwargs)
 
-		elif signal == 'on_batch_end':
-			if trainer.iterations == 0: return
-
+		elif signal == 'on_batch_end' and trainer.iterations != 0:
 			batches_per_epoch = len(trainer.dataloader)
 			if trainer.iterations % int(batches_per_epoch // self.frequency): return
 
 			self.history.flush(iterations=trainer.iterations, epochs=trainer.epochs())
-			if self.show_progress:
-				self.progress_bar.set_description(f"{self.history['loss'][-1]:.2f},"
-			 									f"{self.history['val_loss'][-1]:.2f}", refresh=False)
 
-		elif signal == 'on_training_end':
-			if self.show_progress:
-				self.progress_bar.close()
-				self.progress_bar = None
+			if not self.show_progress or 'loss' not in self.history.keys(): return
+
+			if 'val_loss' in self.history.keys():
+				description = f"{self.history['loss'][-1]:.2f}, {self.history['val_loss'][-1]:.2f}"
+			else:
+				description = f"{self.history['loss'][-1]:.2f}"
+			self.progress_bar.set_description(description, refresh=False)
+
+		elif signal == 'on_training_end' and self.show_progress:
+			self.progress_bar.close()
+			self.progress_bar = None
 
 		elif signal == 'load':
 			self.load(kwargs.pop('path'))
@@ -70,9 +74,7 @@ class Validate:
 		if signal == 'on_training_start':
 			if self.batches is None: self.batches = int(len(self.dataloader) // self.frequency)
 
-		elif signal == 'on_batch_end':
-			if trainer.iterations == 0: return
-
+		elif signal == 'on_batch_end' and trainer.iterations != 0:
 			batches_per_epoch = len(trainer.dataloader)
 			if not trainer.iterations % int(batches_per_epoch // self.frequency): self.validate(trainer)
 
@@ -117,32 +119,29 @@ class Checkpoint:
 			trainer.load(self.path)
 			self.start_time = time()
 
-		elif signal == 'on_batch_end':
-			if trainer.iterations == 0: return
-
-			if time() - self.start_time > self.interval:
-				trainer.save(self.path)
-				self.start_time = time()
+		elif signal == 'on_batch_end' and trainer.iterations != 0 and time() - self.start_time > self.interval:
+			trainer.save(self.path)
+			self.start_time = time()
 
 		elif signal == 'on_training_end':
 			trainer.save(self.path)
 
 		elif signal == 'load':
-			self.load(kwargs.pop('path'))
+			self.load(trainer, kwargs.pop('path'))
 
 		elif signal == 'save':
-			self.save(kwargs.pop('path'))
+			self.save(trainer, kwargs.pop('path'))
 
 	def clear(self):
 		from shutil import rmtree
 		rmtree(self.path)
 
-	def load(self, path):
+	def load(self, trainer, path):
 		from magnet.training.utils import load_object
 		state_dict = load_object(path / self.name / 'dataloader.p', default=None)
 		if state_dict is not None: trainer.dataloader.load_state_dict(state_dict)
 
-	def save(self, path):
+	def save(self, trainer, path):
 		from magnet.training.utils import save_object
 		save_object(trainer.dataloader.state_dict(), path / self.name / 'dataloader.p')
 
