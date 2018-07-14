@@ -64,29 +64,6 @@ class Trainer:
 
 		rmtree(path)
 
-	def show_history(self, keys=None, vs=None, log=None):
-		xlabel = None
-
-		if vs is None:
-			vs = 'epochs' if self._iterations > self._batches_per_epoch else 'batches'
-		vs = vs.lower()
-		if vs == 'epochs':
-			xlabel = 'epochs'
-		elif vs in ('batches', 'iterations'):
-			vs = 'batches'
-			xlabel = 'iterations'
-
-		if keys is None:
-			keys = [k for k in self.history.keys() if k not in ('batches', ) and k[:4] != 'val_']
-
-		for k in keys:
-			if 'loss' in k:
-				_log = log if log is not None else True
-				self.history.show(k, log=_log, x_key=vs, xlabel=xlabel)
-			else:
-				_log = log if log is not None else False
-				self.history.show(k, log=_log, x_key=vs, xlabel=xlabel)
-
 	def epochs(self, mode=None):
 		if mode is None:
 			return self.iterations / len(self.dataloader)
