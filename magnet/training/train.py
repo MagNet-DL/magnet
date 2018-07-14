@@ -13,7 +13,6 @@ class Trainer:
 		self._optimizers = optimizers
 		self._metrics = {metrics: getattr(metrics_module, metrics.lower())} if metrics is not None else {}
 
-		self.babysitter = None
 		self.iterations = 0
 
 	def optimize(self):
@@ -30,7 +29,6 @@ class Trainer:
 
 		cold_start = kwargs.get('cold_start', False) and not hasattr(self, '_iterations')
 		self.training = kwargs.get('training', True)
-		self.babysitter = kwargs.pop('babysitter', None)
 
 		batches_per_epoch = len(self.dataloader)
 
@@ -92,9 +90,6 @@ class Trainer:
 		if mode == 'end':
 			return ((self.iterations + 1) / len(self.dataloader)).is_integer()
 
-	def _gradient_callback(self, batch):
-		if self.babysitter is not None: self.babysitter.append(self.models, batches=batch, epochs=batch / self._batches_per_epoch)
-
 	def load(self, path=None):
 		from magnet.training.utils import load_state, load_object
 
@@ -106,8 +101,6 @@ class Trainer:
 
 		self.callbacks('load', trainer=self, path=path / 'callbacks')
 
-		if self.babysitter is not None: self.babysitter.load(save_path)
-
 	def save(self, path=None):
 		from magnet.training.utils import save_state, save_object
 
@@ -118,8 +111,6 @@ class Trainer:
 		save_object(state_dict, path / 'state.p')
 
 		self.callbacks('save', trainer=self, path=path / 'callbacks')
-
-		if self.babysitter is not None: self.babysitter.save(save_path)
 
 class SupervisedTrainer(Trainer):
 	def __init__(self, model, loss=None, optimizer='adam', metrics=None):

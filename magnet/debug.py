@@ -110,16 +110,29 @@ def shape(debug=True):
     with SetTrace(Monitor(debug)): yield
 
 class Babysitter:
-    def __init__(self, monitor_freq=10):
+    def __init__(self, frequency=10, **kwargs):
         from magnet.training.history import History
+
+        self.name = kwargs.pop('name', 'babysitter')
+        self.frequency = frequency
 
         self.history = History()
 
-        self.monitor_freq = monitor_freq
+    def __call__(self, trainer, signal, **kwargs):
+        if signal == 'gradient':
+            batches_per_epoch = len(trainer.dataloader)
+            if trainer.iterations % int(batches_per_epoch // self.frequency): return
 
-    def append(self, models, **stamps):
-        if stamps['batches'] == 0: return
-        if stamps['batches'] % int((stamps['batches'] / stamps['epochs']) // self.monitor_freq): return
+            self.append(trainer, kwargs.pop('models'))
+
+        elif signal == 'load':
+            self.load(kwargs.pop('path'))
+
+        elif signal == 'save':
+            self.save(kwargs.pop('path'))
+
+    def append(self, trainer, models):
+        stamps = {'iterations': trainer.iterations, 'epochs': trainer.epochs()}
 
         for model in models:
             for name, p in model.named_parameters():
@@ -127,13 +140,10 @@ class Babysitter:
                 v[v != v] = 0
                 self.history.append(name, v.mean().item(), **stamps)
 
-    def flush(self, **stamps):
-        self.history.flush(**stamps)
+    def load(self, path):
+        from magnet.training.utils import load_object
+        self.history = load_object(path / self.name / 'history.p', default=self.history)
 
-    def save(self, save_path):
-        with open(save_path / ('babysitter.p'), 'wb') as f: pickle.dump(self.history, f)
-
-    def load(self, save_path):
-        path = save_path / ('babysitter.p')
-        if path.exists():
-            with open(path, 'rb') as f: self.history = pickle.load(f)
+    def save(self, path):
+        from magnet.training.utils import save_object
+        save_object(self.history, path / self.name / 'history.p')

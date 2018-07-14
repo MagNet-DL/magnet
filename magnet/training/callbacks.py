@@ -102,7 +102,7 @@ class Validate:
 
 class Checkpoint:
 	def __init__(self, path, interval='5 m', **kwargs):
-		self.name = kwargs.pop('name', 'validate')
+		self.name = kwargs.pop('name', 'checkpoint')
 		self.path = path
 		self.interval = self.parse_duration(interval)
 
