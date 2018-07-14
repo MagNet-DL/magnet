@@ -98,13 +98,13 @@ class Trainer:
 
 class SupervisedTrainer(Trainer):
 	def __init__(self, model, optimizer='adam', loss='cross_entropy', metric=None):
-		from magnet.training import metrics as metrics_module
+		from magnet.functional import wiki
 		from torch.nn import functional as F
 
 		super().__init__([model], [optimizer])
-		loss_wiki = {'cross_entropy': F.cross_entropy}
-		self.loss = loss_wiki[loss]
-		self.metric = (metric, getattr(metrics_module, metric.lower())) if metric is not None else None
+
+		self.loss = wiki['losses'][loss]
+		self.metric = (metric, wiki['metrics'][metric.lower()]) if metric is not None else None
 
 	def optimize(self):
 		model = self.models[0]; optimizer = self.optimizers[0]

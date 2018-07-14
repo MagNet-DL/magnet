@@ -117,15 +117,15 @@ class Checkpoint:
 	def __call__(self, trainer, signal, **kwargs):
 		if signal == 'on_training_start':
 			self.path.mkdir(parents=True, exist_ok=True)
-			trainer.load(self.path)
+			trainer.load_state(self.path)
 			self.start_time = time()
 
 		elif signal == 'on_batch_end' and trainer.iterations != 0 and time() - self.start_time > self.interval:
-			trainer.save(self.path)
+			trainer.save_state(self.path)
 			self.start_time = time()
 
 		elif signal == 'on_training_end':
-			trainer.save(self.path)
+			trainer.save_state(self.path)
 
 		elif signal == 'load_state':
 			self.load_state(trainer, kwargs.pop('path'))
