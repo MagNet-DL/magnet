@@ -1,17 +1,14 @@
 import magnet as mag
+
+from torch import optim
 from contextlib import contextmanager
 
 class Trainer:
-	def __init__(self, models, optimizers=['adam']):
-		from torch import optim
-		from magnet.training.callbacks import CallbackQueue
-
+	def __init__(self, models, optimizers):
 		self.models = models
-		if optimizers[0] == 'adam': optimizers = [optim.Adam(model.parameters(), amsgrad=True) for model in models]
 		self.optimizers = optimizers
 
 		self.iterations = 0
-		self.callbacks = CallbackQueue([])
 
 	def optimize(self):
 		raise NotImplementedError
@@ -101,19 +98,21 @@ class SupervisedTrainer(Trainer):
 		from magnet.functional import wiki
 		from torch.nn import functional as F
 
+		if isinstance(optimizer, str): optimizer = optimizer_wiki[optimizer](model.parameters())
+
 		super().__init__([model], [optimizer])
 
 		self.loss = wiki['losses'][loss]
 		self.metric = (metric, wiki['metrics'][metric.lower()]) if metric is not None else None
 
 	def optimize(self):
-		model = self.models[0]; optimizer = self.optimizers[0]
+		optimizer = self.optimizers[0]
 
 		loss = self.get_loss(self.dataloader)
 
 		if self.training:
 			loss.backward()
-			self.callbacks('gradient', trainer=self, models=[model])
+			self.callbacks('gradient', trainer=self, models=self.models)
 			optimizer.step()
 			optimizer.zero_grad()
 
@@ -123,8 +122,6 @@ class SupervisedTrainer(Trainer):
 
 	def get_loss(self, dataloader, validation=False):
 		model = self.models[0]
-
-		mode = 'val' if validation else 'train'
 
 		x, y = next(dataloader)
 		y_pred = model(x)
@@ -140,3 +137,5 @@ class SupervisedTrainer(Trainer):
 class ClassifierTrainer(SupervisedTrainer):
 	def __init__(self, model, optimizer='adam'):
 		super().__init__(model, optimizer, metric='accuracy')
+
+optimizer_wiki = {'adam': optim.Adam}
