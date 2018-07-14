@@ -36,11 +36,17 @@ class Trainer:
 		start_iteration = self.iterations
 
 		self.callbacks('on_training_start', trainer=self, total_iterations=total_iterations)
-		for self.iterations in range(start_iteration, self.iterations + total_iterations):
-			self.callbacks('on_batch_start', trainer=self)
-			self.optimize()
-			self.callbacks('on_batch_end', trainer=self)
+		for self.iterations in range(start_iteration, self.iterations + total_iterations): next(self)
 		self.callbacks('on_training_end', trainer=self)
+
+	def __iter__(self):
+		return self
+
+	def __next__(self):
+		self.callbacks('on_batch_start', trainer=self)
+		self.optimize()
+		self.callbacks('on_batch_end', trainer=self)
+		self.iterations += 1
 
 	@contextmanager
 	def mock(self):
