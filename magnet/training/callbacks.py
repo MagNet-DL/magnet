@@ -48,17 +48,17 @@ class Monitor:
 			self.progress_bar.close()
 			self.progress_bar = None
 
-		elif signal == 'load':
-			self.load(kwargs.pop('path'))
+		elif signal == 'load_state':
+			self.load_state(kwargs.pop('path'))
 
-		elif signal == 'save':
-			self.save(kwargs.pop('path'))
+		elif signal == 'save_state':
+			self.save_state(kwargs.pop('path'))
 
-	def load(self, path):
+	def load_state(self, path):
 		from magnet.training.utils import load_object
 		self.history = load_object(path / self.name / 'history.p', default=self.history)
 
-	def save(self, path):
+	def save_state(self, path):
 		from magnet.training.utils import save_object
 		save_object(self.history, path / self.name / 'history.p')
 
@@ -82,22 +82,22 @@ class Validate:
 		elif signal == 'on_training_end':
 			if not self.drop_last: self.validate_batch(trainer)
 
-		elif signal == 'load':
-			self.load(kwargs.pop('path'))
+		elif signal == 'load_state':
+			self.load_state(kwargs.pop('path'))
 
-		elif signal == 'save':
-			self.save(kwargs.pop('path'))
+		elif signal == 'save_state':
+			self.save_state(kwargs.pop('path'))
 
 	def validate_batch(self, trainer):
 		with mag.eval(*trainer.models):
 			for _ in range(self.batches): self.validate(trainer, self.dataloader)
 
-	def load(self, path):
+	def load_state(self, path):
 		from magnet.training.utils import load_object
 		state_dict = load_object(path / self.name / 'dataloader.p', default=None)
 		if state_dict is not None: self.dataloader.load_state_dict(state_dict)
 
-	def save(self, path):
+	def save_state(self, path):
 		from magnet.training.utils import save_object
 		save_object(self.dataloader.state_dict(), path / self.name / 'dataloader.p')
 
@@ -127,28 +127,31 @@ class Checkpoint:
 		elif signal == 'on_training_end':
 			trainer.save(self.path)
 
-		elif signal == 'load':
-			self.load(trainer, kwargs.pop('path'))
+		elif signal == 'load_state':
+			self.load_state(trainer, kwargs.pop('path'))
 
-		elif signal == 'save':
-			self.save(trainer, kwargs.pop('path'))
+		elif signal == 'save_state':
+			self.save_state(trainer, kwargs.pop('path'))
 
-	def clear(self):
+	def clear_state(self):
 		from shutil import rmtree
 		rmtree(self.path)
 
-	def load(self, trainer, path):
+	def load_state(self, trainer, path):
 		from magnet.training.utils import load_object
 		state_dict = load_object(path / self.name / 'dataloader.p', default=None)
 		if state_dict is not None: trainer.dataloader.load_state_dict(state_dict)
 
-	def save(self, trainer, path):
+	def save_state(self, trainer, path):
 		from magnet.training.utils import save_object
 		save_object(trainer.dataloader.state_dict(), path / self.name / 'dataloader.p')
 
 class CallbackQueue(list):
 	def append(self, callback):
 		if not self.exists(callback.name): super().append(callback)
+
+	def extend(self, callbacks):
+		super().extend([callback for callback in callbacks if not self.exists(callback.name)])
 
 	def find(self, name):
 		callbacks = [callback for callback in self if callback.name == name]

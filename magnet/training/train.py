@@ -4,21 +4,21 @@ from contextlib import contextmanager
 class Trainer:
 	def __init__(self, models, optimizers=['adam']):
 		from torch import optim
+		from magnet.training.callbacks import CallbackQueue
 
 		self.models = models
 		if optimizers[0] == 'adam': optimizers = [optim.Adam(model.parameters(), amsgrad=True) for model in models]
 		self.optimizers = optimizers
 
 		self.iterations = 0
+		self.callbacks = CallbackQueue([])
 
 	def optimize(self):
 		raise NotImplementedError
 
 	def train(self, dataloader, epochs=1, callbacks=[], **kwargs):
-		from magnet.training.callbacks import CallbackQueue
-
 		self.dataloader = dataloader
-		self.callbacks = CallbackQueue(callbacks)
+		self.callbacks.extend(callbacks)
 
 		cold_start = kwargs.get('cold_start', False) and not hasattr(self, '_iterations')
 		self.training = kwargs.get('training', True)
@@ -49,14 +49,18 @@ class Trainer:
 		self.iterations += 1
 
 	@contextmanager
-	def mock(self):
-		from pathlib import Path
-		save_path = Path('.mock_trainer')
+	def mock(self, path=None):
+		from shutil import rmtree
 
-		self._save(save_path=save_path)
+		if path is None:
+			from pathlib import Path
+			path = Path('.mock_trainer')
+
+		self.save_state(path)
 		yield
-		self._load(save_path=save_path)
-		self._clear_checkpoints(save_path=save_path)
+		self.load_state(path)
+
+		rmtree(path)
 
 	def show_history(self, keys=None, vs=None, log=None):
 		xlabel = None
@@ -89,7 +93,7 @@ class Trainer:
 		if mode == 'end':
 			return ((self.iterations + 1) / len(self.dataloader)).is_integer()
 
-	def load(self, path=None):
+	def load_state(self, path=None):
 		from magnet.training.utils import load_state, load_object
 
 		for i, model in enumerate(self.models): load_state(model, path / 'models', alternative_name=str(i))
@@ -98,9 +102,9 @@ class Trainer:
 		state_dict = load_object(path / 'state.p', default={})
 		for attr, val in state_dict.items(): setattr(self, attr, val)
 
-		self.callbacks('load', trainer=self, path=path / 'callbacks')
+		self.callbacks('load_state', trainer=self, path=path / 'callbacks')
 
-	def save(self, path=None):
+	def save_state(self, path=None):
 		from magnet.training.utils import save_state, save_object
 
 		for i, model in enumerate(self.models): save_state(model, path / 'models', alternative_name=str(i))
@@ -109,7 +113,7 @@ class Trainer:
 		state_dict = {attr: getattr(self, attr) for attr in ('iterations', ) if hasattr(self, attr)}
 		save_object(state_dict, path / 'state.p')
 
-		self.callbacks('save', trainer=self, path=path / 'callbacks')
+		self.callbacks('save_state', trainer=self, path=path / 'callbacks')
 
 class SupervisedTrainer(Trainer):
 	def __init__(self, model, optimizer='adam', loss='cross_entropy', metric=None):

@@ -32,29 +32,16 @@ def overfit(trainer, batch_size, epochs=1, metric='loss', sample_space=None, ax=
 
     trainer.data = data
 
-def breakage(trainer, iterations=100, frac_sample=0.01):
-    from types import MethodType
+def check_flow(trainer, data):
+    broken_parameters = {}
+    def callback(trainer, signal, **kwargs):
+        if signal == 'gradient':
+            broken_parameters.update(*[{name for name, p in model.named_parameters() if p.requires_grad and p.grad is None} for model in kwargs.pop('models')])
+    callback.name = 'check_flow'
 
-    broken_weights = []
-    _prev_grad_callback = trainer._gradient_callback
-    def gradient_callback(self, batch):
-        _prev_grad_callback(batch)
-        for model in self.models:
-            for name, p in model.named_parameters():
-                if p.grad is None and name not in broken_weights:
-                    broken_weights.append(name)
+    with trainer.mock(): trainer.train(data(), callbacks=[callback], iterations=1)
 
-    trainer._gradient_callback = MethodType(gradient_callback, trainer)
-
-    data = trainer.data
-    trainer.data = (data(sample_space=frac_sample), data(mode='val'))
-
-    with trainer.mock(): trainer.train(iterations=iterations, save_interval=None)
-
-    trainer.data = data
-    trainer._gradient_callback = _prev_grad_callback
-
-    if len(broken_weights) == 0:
+    if len(broken_parameters) == 0:
         print('No breakage detected')
     else:
         raise RuntimeError('Breaks in the following parameters: ' + ', '.join(broken_weights))
