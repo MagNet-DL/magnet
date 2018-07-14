@@ -17,8 +17,10 @@ class Trainer:
 		raise NotImplementedError
 
 	def train(self, dataloader, epochs=1, callbacks=[], **kwargs):
+		from magnet.training.callbacks import CallbackQueue
+
 		self.dataloader = dataloader
-		self.callbacks.extend(callbacks)
+		self.callbacks = CallbackQueue(callbacks)
 
 		cold_start = kwargs.get('cold_start', False) and not hasattr(self, '_iterations')
 		self.training = kwargs.get('training', True)
@@ -102,7 +104,8 @@ class Trainer:
 		state_dict = load_object(path / 'state.p', default={})
 		for attr, val in state_dict.items(): setattr(self, attr, val)
 
-		self.callbacks('load_state', trainer=self, path=path / 'callbacks')
+		try: self.callbacks('load_state', trainer=self, path=path / 'callbacks')
+		except AttributeError: pass
 
 	def save_state(self, path=None):
 		from magnet.training.utils import save_state, save_object
@@ -113,7 +116,8 @@ class Trainer:
 		state_dict = {attr: getattr(self, attr) for attr in ('iterations', ) if hasattr(self, attr)}
 		save_object(state_dict, path / 'state.p')
 
-		self.callbacks('save_state', trainer=self, path=path / 'callbacks')
+		try: self.callbacks('save_state', trainer=self, path=path / 'callbacks')
+		except AttributeError: pass
 
 class SupervisedTrainer(Trainer):
 	def __init__(self, model, optimizer='adam', loss='cross_entropy', metric=None):
