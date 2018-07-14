@@ -63,12 +63,13 @@ class Monitor:
 		save_object(self.history, path / self.name / 'history.p')
 
 class Validate:
-	def __init__(self, dataloader, frequency=10, batches=None, drop_last=False, **kwargs):
+	def __init__(self, dataloader, validate, frequency=10, batches=None, drop_last=False, **kwargs):
 		self.name = kwargs.pop('name', 'validate')
 		self.dataloader = dataloader
 		self.frequency = frequency
 		self.batches = batches
 		self.drop_last = drop_last
+		self.validate = validate
 
 	def __call__(self, trainer, signal, **kwargs):
 		if signal == 'on_training_start':
@@ -76,10 +77,10 @@ class Validate:
 
 		elif signal == 'on_batch_end' and trainer.iterations != 0:
 			batches_per_epoch = len(trainer.dataloader)
-			if not trainer.iterations % int(batches_per_epoch // self.frequency): self.validate(trainer)
+			if not trainer.iterations % int(batches_per_epoch // self.frequency): self.validate_batch(trainer)
 
 		elif signal == 'on_training_end':
-			if not self.drop_last: self.validate(trainer)
+			if not self.drop_last: self.validate_batch(trainer)
 
 		elif signal == 'load':
 			self.load(kwargs.pop('path'))
@@ -87,9 +88,9 @@ class Validate:
 		elif signal == 'save':
 			self.save(kwargs.pop('path'))
 
-	def validate(self, trainer):
+	def validate_batch(self, trainer):
 		with mag.eval(*trainer.models):
-				for _ in range(self.batches): trainer.validate(self.dataloader)
+			for _ in range(self.batches): self.validate(trainer, self.dataloader)
 
 	def load(self, path):
 		from magnet.training.utils import load_object

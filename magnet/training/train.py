@@ -18,9 +18,6 @@ class Trainer:
 	def optimize(self):
 		raise NotImplementedError
 
-	def validate(self, dataloader):
-		pass
-
 	def train(self, dataloader, epochs=1, callbacks=[], **kwargs):
 		from magnet.training.callbacks import CallbackQueue
 
@@ -127,8 +124,9 @@ class SupervisedTrainer(Trainer):
 			optimizer.step()
 			optimizer.zero_grad()
 
-	def validate(self, dataloader):
-		self._get_loss(dataloader, validation=True)
+	@staticmethod
+	def validate(trainer, dataloader):
+		trainer._get_loss(dataloader, validation=True)
 
 	def _get_loss(self, dataloader, validation=False):
 		model = self.models[0]; loss_fn = self.losses[0]
