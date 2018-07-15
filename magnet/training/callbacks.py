@@ -17,8 +17,6 @@ class Monitor:
 		if signal == 'on_training_start':
 			from magnet._utils import get_tqdm; tqdm = get_tqdm()
 
-			self.history.buffer_size = trainer.dataloader.buffer_size
-
 			if self.show_progress:
 				self.progress_bar = tqdm(total=kwargs.pop('total_iterations'), unit_scale=True,
 										unit_divisor=len(trainer.dataloader), leave=False)
@@ -28,7 +26,7 @@ class Monitor:
 				self.progress_bar.update()
 				self.progress_bar.refresh()
 
-		elif signal == 'write_metrics':
+		elif signal == 'write_stats':
 			self.history.append(**kwargs)
 
 		elif signal == 'on_batch_end' and trainer.iterations != 0:

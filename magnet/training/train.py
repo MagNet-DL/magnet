@@ -20,10 +20,11 @@ class Trainer:
 		self.callbacks = CallbackQueue(callbacks)
 
 		total_iterations = kwargs.get('iterations', int(epochs * len(dataloader)))
-		start_iteration = self.iterations
 
 		self.callbacks('on_training_start', trainer=self, total_iterations=total_iterations)
-		for self.iterations in range(start_iteration, self.iterations + total_iterations): next(self)
+
+		start_iteration = self.iterations
+		for self.iterations in range(self.iterations, start_iteration + total_iterations): next(self)
 		self.callbacks('on_training_end', trainer=self)
 
 	def __iter__(self):
@@ -118,9 +119,9 @@ class SupervisedTrainer(Trainer):
 
 		loss = self.loss(y_pred, y)
 
-		self.callbacks('write_metrics', trainer=self, key='loss', value=loss.item(), validation=validation, buffer=True)
+		self.callbacks('write_stats', trainer=self, key='loss', value=loss.item(), validation=validation, buffer_size=len(dataloader))
 		if self.metric is not None:
-			self.callbacks('write_metrics', trainer=self, key=self.metric[0], value=self.metric[1](y_pred, y).item(), validation=validation, buffer=True)
+			self.callbacks('write_stats', trainer=self, key=self.metric[0], value=self.metric[1](y_pred, y).item(), validation=validation, buffer_size=len(dataloader))
 
 		return loss
 

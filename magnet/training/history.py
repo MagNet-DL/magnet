@@ -1,22 +1,15 @@
 class History(dict):
-	def __init__(self, **kwargs):
-		super().__init__(**kwargs)
-		self.buffer_size = -1
-		self.val_buffer_size = -1
-
 	def find(self, key):
 		return {k: self[k] for k in self.keys() if key in k}
 
-	def append(self, key, value, validation=False, buffer=False, **stamps):
+	def append(self, key, value, validation=False, buffer_size=None, **stamps):
 		if validation: key = 'val_' + key
-		buffer_size = self.val_buffer_size if validation else self.buffer_size
 
 		try:
-			self[key].append(value, buffer, **stamps)
+			self[key].append(value, buffer=(buffer_size is not None), **stamps)
 		except KeyError:
 			self[key] = SnapShot(buffer_size)
-			self[key].append(value, buffer, **stamps)
-		return
+			self[key].append(value, buffer=(buffer_size is not None), **stamps)
 
 	def show(self, key=None, log=False, x_key=None, xlabel=None, validation=True, label=None, ax=None):
 		from matplotlib import pyplot as plt
