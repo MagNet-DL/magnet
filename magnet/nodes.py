@@ -153,12 +153,12 @@ class Linear(Node):
 
     def build(self, x):
         from numpy import prod
-        from magnet.functional import activation_wiki
+        from magnet.functional import wiki
 
         self._args['i'] = prod(x.shape[1:]) if self._args['flat'] else x.shape[-1]
 
 
-        self._activation = activation_wiki[self._args['act']]
+        self._activation = wiki['activations'][self._args['act']]
 
         self._layer = nn.Linear(*[self._args[k] for k in ('i', 'o', 'b')])
         super().build(x)

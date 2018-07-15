@@ -91,6 +91,16 @@ class OmniSampler(Sampler):
 		return len(self.dataset)
 
 class DataLoader(DataLoaderPyTorch):
+	def __init__(self, dataset, batch_size=1, shuffle=False, sampler=None,
+				batch_sampler=None, num_workers=0, collate_fn=default_collate,
+				pin_memory=False, drop_last=False, timeout=0,
+				worker_init_fn=None, buffer_size='full'):
+		super().__init__(dataset, batch_size, shuffle, sampler, batch_sampler, num_workers, default_collate,
+						pin_memory, drop_last, timeout, worker_init_fn)
+
+		if buffer_size == 'full': buffer_size = len(self)
+		self.buffer_size = buffer_size
+
 	def state_dict(self):
 		sampler = self.sampler
 		if sampler.shuffle and sampler.replace: return None

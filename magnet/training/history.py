@@ -106,5 +106,3 @@ class SnapShot:
 			x, y = self._retrieve(stamp=x)
 
 		if len(x) != 0: ax.plot(x, y, label=label)
-
-
