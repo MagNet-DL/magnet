@@ -123,8 +123,4 @@ class SupervisedTrainer(Trainer):
 
 		return loss
 
-class ClassifierTrainer(SupervisedTrainer):
-	def __init__(self, model, optimizer='adam'):
-		super().__init__(model, optimizer, metric='accuracy')
-
 optimizer_wiki = {'adam': optim.Adam}
