@@ -22,9 +22,7 @@ class Trainer:
 		total_iterations = kwargs.get('iterations', int(epochs * len(dataloader)))
 
 		self.callbacks('on_training_start', trainer=self, total_iterations=total_iterations)
-
-		start_iteration = self.iterations
-		for self.iterations in range(self.iterations, start_iteration + total_iterations): next(self)
+		for self.iterations in range(self.iterations, self.iterations + total_iterations): next(self)
 		self.callbacks('on_training_end', trainer=self)
 
 	def __iter__(self):
