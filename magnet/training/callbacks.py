@@ -1,4 +1,5 @@
 import magnet as mag
+import torch
 
 from time import time
 
@@ -145,6 +146,24 @@ class Checkpoint:
 	def save_state(self, trainer, path):
 		from magnet.training.utils import save_object
 		save_object(trainer.dataloader.state_dict(), path / self.name / 'dataloader.p')
+
+class ColdStart:
+	def __init__(self, epochs=0.1, **kwargs):
+		self.name = kwargs.pop('name', 'checkpoint')
+		self.epochs = epochs
+		self.iterations = kwargs.pop('iterations', None)
+
+	def __call__(self, trainer, signal, **kwargs):
+		if signal == 'on_training_start':
+			torch.no_grad()
+			for model in trainer.models: model.eval()
+
+			if self.iterations is None: self.iterations = int(self.epochs * len(trainer.dataloader))
+
+		elif signal == 'on_batch_end' and trainer.iterations == self.iterations - 1:
+			torch.enable_grad()
+			for model in trainer.models: model.train()
+			trainer.callbacks.remove(self)
 
 class CallbackQueue(list):
 	def append(self, callback):

@@ -19,19 +19,7 @@ class Trainer:
 		self.dataloader = dataloader
 		self.callbacks = CallbackQueue(callbacks)
 
-		cold_start = kwargs.get('cold_start', False) and not hasattr(self, '_iterations')
-		self.training = kwargs.get('training', True)
-
-		batches_per_epoch = len(self.dataloader)
-
-		total_iterations = kwargs.get('iterations', int(epochs * batches_per_epoch))
-
-		if cold_start:
-			_kwargs = {k: v for k, v in kwargs.items() if k not in ('iterations', 'cold_start', 'training', 'monitor_finally')}
-			with mag.eval(*self.models):
-				self.train(epochs, batch_size, shuffle, iterations=int(batches_per_epoch // monitor_freq) + 1,
-							cold_start=False, training=False, monitor_finally=False, **_kwargs)
-
+		total_iterations = kwargs.get('iterations', int(epochs * len(dataloader)))
 		start_iteration = self.iterations
 
 		self.callbacks('on_training_start', trainer=self, total_iterations=total_iterations)
@@ -45,7 +33,6 @@ class Trainer:
 		self.callbacks('on_batch_start', trainer=self)
 		self.optimize()
 		self.callbacks('on_batch_end', trainer=self)
-		self.iterations += 1
 
 	@contextmanager
 	def mock(self, path=None):
@@ -68,6 +55,9 @@ class Trainer:
 			return (self.iterations / len(self.dataloader)).is_integer()
 		if mode == 'end':
 			return ((self.iterations + 1) / len(self.dataloader)).is_integer()
+
+	def is_training(self):
+		return all(model.training for model in self.models)
 
 	def load_state(self, path=None):
 		from magnet.training.utils import load_state, load_object
@@ -110,7 +100,7 @@ class SupervisedTrainer(Trainer):
 
 		loss = self.get_loss(self.dataloader)
 
-		if self.training:
+		if self.is_training():
 			loss.backward()
 			self.callbacks('gradient', trainer=self, models=self.models)
 			optimizer.step()
