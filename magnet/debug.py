@@ -30,9 +30,9 @@ def overfit(trainer, data, batch_size, epochs=1, metric='loss', sample_space=Non
 
     with trainer.mock():
         trainer.train(data(batch_size, sample_space=sample_space), epochs, callbacks=[Monitor(frequency=10 / epochs)])
-        trainer.callbacks[0].history.show(metric, x_key='epochs', xlabel='epochs',
+        trainer.callbacks[0].history.show(metric, x_key='epochs',
                                 validation=False, ax=ax, log=True,
-                                label=f'{batch_size}, {sample_space}')
+                                legend=f'{batch_size}, {sample_space}')
 def check_flow(trainer, data):
     broken_parameters = {}
     def callback(trainer, signal, **kwargs):

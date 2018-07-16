@@ -86,24 +86,30 @@ class Lambda(Node):
         return self._args['fn'](*args, **kwargs)
 
 class Conv(Node):
-    def __init__(self, c=None, k=3, p='half', s=1, d=1, g=1, b=True, ic=None, act='relu', **kwargs):
-        super().__init__(c, k, p, s, d, g, b, ic, act, **kwargs)
+    def __init__(self, c=None, k=3, p='half', s=1, d=1, g=1, b=True, ic=None, act='relu', bn=False, **kwargs):
+        super().__init__(c, k, p, s, d, g, b, ic, act, bn, **kwargs)
 
     def build(self, x):
-        from magnet.functional import activation_wiki
+        from magnet.functional import wiki
+
         self._set_padding(x)
         self._args['ic'] = x.shape[1]
 
-        self._activation = activation_wiki[self._args['act']]
+        self._activation = wiki['activations'][self._args['act']]
         layer_class = self._find_layer(x)
         self._layer = layer_class(kernel_size=self._args['k'], out_channels=self._args['c'],
                                 stride=self._args['s'], padding=self._args['p'], dilation=self._args['d'],
                                 groups=self._args['g'], bias=self._args['b'], in_channels=self._args['ic'])
+
+        if self._args['bn']: self._batch_norm = BatchNorm()
         super().build(x)
 
     def forward(self, x):
-        if hasattr(self, '_upsample'): layers.insert(0, Lambda(lambda x: F.upsample(x, scale_factor=self._upsample), name='Upsample'))
-        return self._activation(self._layer(x))
+        if hasattr(self, '_upsample'): x = F.upsample(x, scale_factor=self._upsample)
+        x = self._activation(self._layer(x))
+        if self._args['bn']: x = self._batch_norm(x)
+
+        return x
 
     def _find_layer(self, x):
         shape_dict = [nn.Conv1d, nn.Conv2d, nn.Conv3d]
@@ -145,8 +151,8 @@ class Conv(Node):
         return convs
 
 class Linear(Node):
-    def __init__(self, o=None, b=True, flat=True, i=None, act='relu', **kwargs):
-        super().__init__(o, b, flat, i, act, **kwargs)
+    def __init__(self, o=None, b=True, flat=True, i=None, act='relu', bn=False, **kwargs):
+        super().__init__(o, b, flat, i, act, bn, **kwargs)
 
     def build(self, x):
         from numpy import prod
@@ -158,11 +164,16 @@ class Linear(Node):
         self._activation = wiki['activations'][self._args['act']]
 
         self._layer = nn.Linear(*[self._args[k] for k in ('i', 'o', 'b')])
+
+        if self._args['bn']: self._batch_norm = BatchNorm()
         super().build(x)
 
     def forward(self, x):
         if self._args['flat']: x = x.view(x.size(0), -1)
-        return self._activation(self._layer(x))
+        x = self._activation(self._layer(x))
+        if self._args['bn']: x = self._batch_norm(x)
+
+        return x
 
     def _mul_list(self, n):
         lins = [self]
@@ -188,6 +199,6 @@ class BatchNorm(Node):
         return self._layer(x)
 
     def _find_layer(self, x):
-        shape_dict = [nn.BatchNorm1d, nn.BatchNorm2d, nn.BatchNorm3d]
+        shape_dict = [nn.BatchNorm1d, nn.BatchNorm1d, nn.BatchNorm2d, nn.BatchNorm3d]
         ndim = len(x.shape) - 1
         return shape_dict[ndim - 1]
