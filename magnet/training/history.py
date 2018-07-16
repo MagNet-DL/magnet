@@ -11,7 +11,7 @@ class History(dict):
 			self[key] = SnapShot(buffer_size)
 			self[key].append(value, buffer=(buffer_size is not None), **stamps)
 
-	def show(self, key=None, log=False, x_key=None, xlabel=None, validation=True, label=None, ax=None):
+	def show(self, key=None, log=False, x_key=None, validation=True, legend=None, ax=None):
 		from matplotlib import pyplot as plt
 
 		if key is None:
@@ -21,21 +21,21 @@ class History(dict):
 			return
 
 		if ax is None: fig, ax = plt.subplots()
-		lbl = 'training' if label is None else label
-		self[key].show(ax, x_key, label=lbl)
+		label = 'training' if legend is None else legend
+		self[key].show(ax, x_key, label=label)
 
 		if validation:
 			try:
-				lbl = 'validation' if label is None else label
-				self['val_' + key].show(ax, x_key, label=lbl)
+				label = 'validation' if legend is None else legend
+				self['val_' + key].show(ax, x_key, label=label)
 			except KeyError: pass
 
 		if log: plt.yscale('log')
 
 		plt.ylabel(key.title())
-		if isinstance(xlabel, str):
-			plt.xlabel(xlabel)
-			plt.title(f'{key.title()} vs {xlabel.title()}')
+		if isinstance(x_key, str):
+			plt.xlabel(x_key)
+			plt.title(f'{key.title()} vs {x_key.title()}')
 		elif isinstance(x_key, str):
 			plt.xlabel(x_key)
 			plt.title(f'{key.title()} vs {x_key.title()}')

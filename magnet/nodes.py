@@ -64,7 +64,7 @@ class Node(nn.Module):
         return [self] + [self.__class__(**self._args) for _ in range(n - 1)]
 
     def  _mul_list(self, n):
-        pass
+        raise NotImplementedError
 
     def __mul__(self, n):
         if type(n) is int or (type(n) is float and n.is_integer()):
@@ -72,9 +72,6 @@ class Node(nn.Module):
 
         if type(n) is tuple or type(n) is list:
             return self._mul_list(n)
-
-    def _get_name(self):
-        return self.name
 
 class Lambda(Node):
     def __init__(self, fn, **kwargs):
@@ -85,8 +82,8 @@ class Lambda(Node):
         if self.name is None:
             self.name = self.__class__.__name__
 
-    def forward(self, x):
-        return self._args['fn'](x)
+    def forward(self, *args, **kwargs):
+        return self._args['fn'](*args, **kwargs)
 
 class Conv(Node):
     def __init__(self, c=None, k=3, p='half', s=1, d=1, g=1, b=True, ic=None, act='relu', **kwargs):
@@ -176,3 +173,21 @@ class Linear(Node):
             lins.append(self.__class__(**kwargs))
 
         return lins
+
+class BatchNorm(Node):
+    def __init__(self, e=1e-05, m=0.1, a=True, track=True, i=None, **kwargs):
+        super().__init__(e, m, a, track, i, **kwargs)
+
+    def build(self, x):
+        self._args['i'] = x.shape[1]
+        layer_class = self._find_layer(x)
+        self._layer = layer_class(*[self._args[k] for k in ('i', 'e', 'm', 'a', 'track')])
+        super().build(x)
+
+    def forward(self, x):
+        return self._layer(x)
+
+    def _find_layer(self, x):
+        shape_dict = [nn.BatchNorm1d, nn.BatchNorm2d, nn.BatchNorm3d]
+        ndim = len(x.shape) - 1
+        return shape_dict[ndim - 1]
