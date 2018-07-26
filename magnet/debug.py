@@ -3,6 +3,7 @@ from contextlib import contextmanager
 
 def overfit(trainer, data, batch_size, epochs=1, metric='loss', sample_space=None, ax=None):
     from matplotlib import pyplot as plt
+    from magnet.training.callbacks import Monitor
 
     if sample_space is None:
         _, ax = plt.subplots()
@@ -14,25 +15,21 @@ def overfit(trainer, data, batch_size, epochs=1, metric='loss', sample_space=Non
 
         overfit(trainer, data, batch_size=16, epochs=epochs, metric=metric, sample_space=16, ax=ax)
 
-        bs = min(batch_size, 16)
-        if bs > 16:
-            overfit(trainer, data, bs, epochs, metric, sample_space=16, ax=ax)
-
         sample_length = int(len(data) * 0.01)
         bs = min(batch_size, sample_length)
         if sample_length > 16:
             overfit(trainer, data, bs, epochs, metric, sample_length, ax)
 
         plt.show()
+
         return
 
-    from magnet.training.callbacks import Monitor
-
     with trainer.mock():
-        trainer.train(data(batch_size, sample_space=sample_space), epochs, callbacks=[Monitor(frequency=10 / epochs)])
+        trainer.train(data(batch_size, sample_space=sample_space, shuffle=True), epochs, callbacks=[Monitor(frequency=10 / epochs)])
         trainer.callbacks[0].history.show(metric, x_key='epochs',
                                 validation=False, ax=ax, log=True,
                                 legend=f'{batch_size}, {sample_space}')
+
 def check_flow(trainer, data):
     broken_parameters = {}
     def callback(trainer, signal, **kwargs):

@@ -93,7 +93,7 @@ class Conv(Node):
         from magnet.functional import wiki
 
         self._set_padding(x)
-        self._args['ic'] = x.shape[1]
+        if self._args['ic'] is None: self._args['ic'] = x.shape[1]
 
         self._activation = wiki['activations'][self._args['act']]
         layer_class = self._find_layer(x)
@@ -158,7 +158,7 @@ class Linear(Node):
         from numpy import prod
         from magnet.functional import wiki
 
-        self._args['i'] = prod(x.shape[1:]) if self._args['flat'] else x.shape[-1]
+        if self._args['i'] is None: self._args['i'] = prod(x.shape[1:]) if self._args['flat'] else x.shape[-1]
 
 
         self._activation = wiki['activations'][self._args['act']]
