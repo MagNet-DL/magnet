@@ -65,13 +65,13 @@ class OmniSampler(Sampler):
 
 	def _begin(self, pos):
 		if self.sample_space is None:
-			self.indices = list(range(len(self)))
+			self.indices = list(range(len(self.dataset)))
 		elif isinstance(self.sample_space, (list, tuple)):
 			self.indices = self.sample_space
 		elif isinstance(self.sample_space, int):
 			self.indices = list(range(self.sample_space))
 		elif isinstance(self.sample_space, float):
-			self.indices = list(range(int(self.sample_space * len(self))))
+			self.indices = list(range(int(self.sample_space * len(self.dataset))))
 
 		if self.shuffle:
 			self.indices = np.random.choice(self.indices, len(self),
@@ -80,7 +80,7 @@ class OmniSampler(Sampler):
 
 	def __next__(self):
 		self.pos += 1
-		if self.pos >= len(self.indices): self._begin(0)
+		if self.pos >= len(self): self._begin(0)
 
 		return self.indices[self.pos]
 
@@ -88,7 +88,7 @@ class OmniSampler(Sampler):
 		return self
 
 	def __len__(self):
-		return len(self.dataset)
+		return len(self.indices)
 
 class DataLoader(DataLoaderPyTorch):
 	def __init__(self, dataset, batch_size=1, shuffle=False, sampler=None,
@@ -100,6 +100,9 @@ class DataLoader(DataLoaderPyTorch):
 
 		if buffer_size == 'full': buffer_size = len(self)
 		self.buffer_size = buffer_size
+
+		if len(self) == 0:
+		  raise RuntimeError(f"Batch size too high. Either need more data / sample space or less batch size.\nMaximum allowed batch size is {len(self.sampler)}")
 
 	def state_dict(self):
 		sampler = self.sampler
@@ -131,7 +134,7 @@ class DataLoader(DataLoaderPyTorch):
 		return next(iter(self))
 
 	def __len__(self):
-		return int(len(self.sampler.indices) // self.batch_size)
+		return int(len(self.sampler) // self.batch_size)
 
 class Data:
 	def __init__(self, path=None, **kwargs):
