@@ -95,7 +95,7 @@ class DataLoader(DataLoaderPyTorch):
 				batch_sampler=None, num_workers=0, collate_fn=default_collate,
 				pin_memory=False, drop_last=False, timeout=0,
 				worker_init_fn=None, buffer_size='full'):
-		super().__init__(dataset, batch_size, shuffle, sampler, batch_sampler, num_workers, default_collate,
+		super().__init__(dataset, batch_size, shuffle, sampler, batch_sampler, num_workers, collate_fn,
 						pin_memory, drop_last, timeout, worker_init_fn)
 
 		if buffer_size == 'full': buffer_size = len(self)
