@@ -13,7 +13,8 @@ def overfit(trainer, data, batch_size, epochs=1, metric='loss', sample_space=Non
             overfit(trainer, data, batch_size=1, epochs=epochs,
                     metric=metric, sample_space=sample_space, ax=ax)
 
-        overfit(trainer, data, batch_size=16, epochs=epochs, metric=metric, sample_space=16, ax=ax)
+        if batch_size >= 16:
+            overfit(trainer, data, batch_size=16, epochs=epochs, metric=metric, sample_space=16, ax=ax)
 
         sample_length = int(len(data) * 0.01)
         bs = min(batch_size, sample_length)
@@ -31,10 +32,12 @@ def overfit(trainer, data, batch_size, epochs=1, metric='loss', sample_space=Non
                                 legend=f'{batch_size}, {sample_space}')
 
 def check_flow(trainer, data):
-    broken_parameters = {}
+    broken_parameters = set()
     def callback(trainer, signal, **kwargs):
         if signal == 'gradient':
-            broken_parameters.update(*[{name for name, p in model.named_parameters() if p.requires_grad and p.grad is None} for model in kwargs.pop('models')])
+            for model in kwargs.pop('models'):
+                broken_parameters.update(set(name for name, p in model.named_parameters(prefix=model.__class__.__name__) if p.requires_grad and p.grad is None))
+
     callback.name = 'check_flow'
 
     with trainer.mock(): trainer.train(data(), callbacks=[callback], iterations=1)
@@ -42,7 +45,7 @@ def check_flow(trainer, data):
     if len(broken_parameters) == 0:
         print('No breakage detected')
     else:
-        raise RuntimeError('Breaks in the following parameters: ' + ', '.join(broken_weights))
+        raise RuntimeError('Breaks in the following parameters: ' + ', '.join(broken_parameters))
 
 class Babysitter:
     def __init__(self, frequency=10, **kwargs):
