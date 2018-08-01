@@ -1,11 +1,15 @@
 import torch, pickle
 
+import magnet as mag
+
 def load_state(module, path, alternative_name=None):
 	name = alternative_name if not hasattr(module, 'name') else module.name
 	if name is None: raise RuntimeError('Module Name is None!')
 
 	filepath = path / (name + '.pt')
-	if filepath.exists(): module.load_state_dict(torch.load(filepath))
+
+	device = 'cuda:0' if mag.device.type == 'cuda' else 'cpu'
+	if filepath.exists(): module.load_state_dict(torch.load(filepath, map_location=device))
 
 def save_state(module, path, alternative_name=None):
 	name = alternative_name if not hasattr(module, 'name') else module.name

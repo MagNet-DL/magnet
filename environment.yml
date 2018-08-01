@@ -3,10 +3,10 @@ channels:
   - pytorch
   - defaults
 dependencies:
-  - pytorch=0.4.0
+  - pytorch=0.4.1
   - torchvision=0.2.1
   - pip:
-    - beautifultable==0.5.1
+    - beautifultable==0.5.2
     - matplotlib==2.2.2
     - scipy==1.1.0
     - tqdm==4.23.4
