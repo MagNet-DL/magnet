@@ -136,4 +136,16 @@ class SupervisedTrainer(Trainer):
 
         return loss
 
+def finish_training(path, names=None):
+    if not path.exists(): return
+
+    if isinstance(names, str): names = [names]
+    filenames = list((path / 'models').glob('*.pt'))
+    if names is None: names = [filename.stem for filename in filenames]
+
+    for name, filename in zip(names, filenames):
+        shutil.move(filename, path.parent / (name + '.pt'))
+
+    shutil.rmtree(path)
+
 optimizer_wiki = {'adam': optim.Adam}
