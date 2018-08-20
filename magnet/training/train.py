@@ -8,7 +8,8 @@ class Trainer:
         self.models = models
         self.optimizers = optimizers
 
-        self.iterations = 0
+        self.parameters = set()
+        self.register_parameter('iterations', 0)
 
     def optimize(self):
         raise NotImplementedError
@@ -76,11 +77,15 @@ class Trainer:
         for i, model in enumerate(self.models): save_state(model, path / 'models', alternative_name=str(i))
         for i, optimizer in enumerate(self.optimizers): save_state(optimizer, path / 'optimizers', alternative_name=str(i))
 
-        state_dict = {attr: getattr(self, attr) for attr in ('iterations', ) if hasattr(self, attr)}
+        state_dict = {attr: getattr(self, attr) for attr in self.parameters}
         save_object(state_dict, path / 'state.p')
 
         try: self.callbacks('save_state', trainer=self, path=path / 'callbacks')
         except AttributeError: pass
+
+    def register_parameter(self, name, value):
+        setattr(self, name, value)
+        self.parameters.add(name)
 
 class SupervisedTrainer(Trainer):
     def __init__(self, model, optimizer='adam', loss='cross_entropy', metrics=[]):
