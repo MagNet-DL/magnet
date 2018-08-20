@@ -163,6 +163,22 @@ class ColdStart:
 			for model in trainer.models: model.train()
 			trainer.callbacks.remove(self)
 
+class LRScheduler:
+	def __init__(self, scheduler, **kwargs):
+		self.name = kwargs.pop('name', 'lr_scheduler')
+		self.scheduler = scheduler
+
+	def __call__(self, trainer, signal, **kwargs):
+		if signal == 'on_batch_start' and trainer.epochs('start'): self.scheduler.step()
+
+	def load_state(self, path):
+		from magnet.training.utils import load_state
+		load_state(self.scheduler, path / self.name, alternative_name='scheduler')
+
+	def save_state(self, path):
+		from magnet.training.utils import save_state
+		save_state(self.scheduler, path / self.name, alternative_name='scheduler')
+
 class CallbackQueue(list):
 	def append(self, callback):
 		if not self.exists(callback.name): super().append(callback)
