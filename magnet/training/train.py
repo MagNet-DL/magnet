@@ -83,18 +83,21 @@ class Trainer:
         except AttributeError: pass
 
 class SupervisedTrainer(Trainer):
-    def __init__(self, model, optimizer='adam', loss='cross_entropy', metric=None):
+    def __init__(self, model, optimizer='adam', loss='cross_entropy', metrics=[]):
         from magnet.functional import wiki
         from torch.nn import functional as F
 
         if isinstance(optimizer, str): optimizer = optimizer_wiki[optimizer.lower()](model.parameters())
         if isinstance(loss, str): loss = wiki['losses'][loss.lower()]
-        if isinstance(metric, str): metric = (metric, wiki['metrics'][metric.lower()])
+
+        if not isinstance(metrics, (tuple, list)): metrics = [metrics]
+        for i, metric in enumerate(metrics):
+            if isinstance(metric, str): metrics[i] = (metric, wiki['metrics'][metric.lower()])
 
         super().__init__([model], [optimizer])
 
         self.loss = loss
-        self.metric = metric
+        self.metrics = metrics
         
 
     def optimize(self):
@@ -124,7 +127,7 @@ class SupervisedTrainer(Trainer):
         loss = self.loss(y_pred, y)
 
         write_stats('loss', loss.item())
-        if self.metric is not None: write_stats(self.metric[0], self.metric[1](y_pred, y).item())
+        for metric in self.metrics: write_stats(metric[0], metric[1](y_pred, y).item())
 
         return loss
 
