@@ -185,20 +185,21 @@ class Linear(Node):
 
         return lins
 
-class RNN(Node):
-    def __init__(self, n=1, h=None, b=False, bi=False, act='tanh', d=0, batch_first=False, i=None, **kwargs):
-        super().__init__(n, h, b, bi, act, d, batch_first, **kwargs)
+class _RNNBase(Node):
+    def __init__(self, mode, n=1, h=None, b=False, bi=False, d=0, batch_first=False, i=None, act='tanh', **kwargs):
+        self._layer = mode
+        super().__init__(n, h, b, bi, d, batch_first, act, **kwargs)
 
     def build(self, x, h):
-        from numpy import prod
-        from magnet.functional import wiki
-
         if self._args['i'] is None: self._args['i'] =  x.shape[-1]
 
-        self._layer = nn.RNN(*[self._args[k] for k in ('i', 'h', 'n')],
-                            nonlinearity=self._args['act'], bias=self._args['b'],
-                            batch_first=self._args['batch_first'],
-                            dropout=self._args['d'], bidirectional=self._args['bi'])
+        self._layer = {'rnn': nn.RNN, 'lstm': nn.LSTM, 'gru': nn.GRU}[self._layer.lower()]
+
+        kwargs = {'nonlinearity': self._args['act'], 'bias': self._args['b'],
+                'batch_first': self._args['batch_first'],
+                'dropout': self._args['d'], 'bidirectional': self._args['bi']}
+        if not isinstance(self._layer, nn.RNN): kwargs.pop('nonlinearity')
+        self._layer = self._layer(*[self._args[k] for k in ('i', 'h', 'n')], **kwargs)
 
         super().build(x, h)
 
@@ -214,6 +215,18 @@ class RNN(Node):
             rnns.append(self.__class__(**kwargs))
 
         return rnns
+
+class RNN(_RNNBase):
+    def __init__(self, n=1, h=None, b=False, bi=False, act='tanh', d=0, batch_first=False, i=None, **kwargs):
+        super().__init__('rnn', n, h, b, bi, act, d, batch_first, **kwargs)
+
+class LSTM(_RNNBase):
+    def __init__(self, n=1, h=None, b=False, bi=False, act='tanh', d=0, batch_first=False, i=None, **kwargs):
+        super().__init__('lstm', n, h, b, bi, act, d, batch_first, **kwargs)
+
+class GRU(_RNNBase):
+    def __init__(self, n=1, h=None, b=False, bi=False, act='tanh', d=0, batch_first=False, i=None, **kwargs):
+        super().__init__('gru', n, h, b, bi, act, d, batch_first, **kwargs)
 
 class BatchNorm(Node):
     def __init__(self, e=1e-05, m=0.1, a=True, track=True, i=None, **kwargs):
