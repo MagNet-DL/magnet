@@ -160,12 +160,9 @@ def pack_collate(batch, pack_dims='all'):
     return default_collate(batch)
 
 class Data:
-    def __init__(self, path=None, **kwargs):
+    def __init__(self, **kwargs):
         if not hasattr(self, '_name'): self._name = self.__class__.__name__
 
-        if path is None: path = DIR_DATA
-        self._path = path / self._name
-        self._path.mkdir(parents=True, exist_ok=True)
         self._num_workers = kwargs.pop('num_workers', 0)
         self._collate_fn = kwargs.pop('collate_fn', pack_collate)
         self._pin_memory = kwargs.pop('pin_memory', False)
@@ -173,19 +170,6 @@ class Data:
         self._worker_init_fn = kwargs.pop('worker_init_fn', None)
         self._transforms = kwargs.pop('transforms', None)
         self._get_fn = kwargs.pop('get_fn', None)
-
-        self._download()
-        self._preprocess()
-
-    def _is_downloaded(self):
-        return True
-
-    def _download(self):
-        if self._is_downloaded(): return
-        pass
-
-    def _preprocess(self):
-        pass
 
     def __getitem__(self, args):
         if isinstance(args, int): return self['train'][args]
