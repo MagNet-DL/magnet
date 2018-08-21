@@ -185,6 +185,36 @@ class Linear(Node):
 
         return lins
 
+class RNN(Node):
+    def __init__(self, n=1, h=None, b=False, bi=False, act='tanh', d=0, batch_first=False, i=None, **kwargs):
+        super().__init__(n, h, b, bi, act, d, batch_first, **kwargs)
+
+    def build(self, x, h):
+        from numpy import prod
+        from magnet.functional import wiki
+
+        if self._args['i'] is None: self._args['i'] =  x.shape[-1]
+
+        self._layer = nn.RNN(*[self._args[k] for k in ('i', 'h', 'n')],
+                            nonlinearity=self._args['act'], bias=self._args['b'],
+                            batch_first=self._args['batch_first'],
+                            dropout=self._args['d'], bidirectional=self._args['bi'])
+
+        super().build(x, h)
+
+    def forward(self, x, h):
+        return self._layer(x)
+
+    def _mul_list(self, n):
+        rnns = [self]
+        self._args['h'] = n[0]
+        kwargs = self._args.copy()
+        for h in n[1:]:
+            kwargs['h'] = h
+            rnns.append(self.__class__(**kwargs))
+
+        return rnns
+
 class BatchNorm(Node):
     def __init__(self, e=1e-05, m=0.1, a=True, track=True, i=None, **kwargs):
         super().__init__(e, m, a, track, i, **kwargs)
