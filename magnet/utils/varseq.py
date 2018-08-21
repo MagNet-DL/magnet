@@ -15,3 +15,8 @@ def pack(sequences, lengths=None):
 
     return pack_padded_sequence(sequences, torch.tensor(lengths)), order
 
+def unpack(sequence, order):
+    sequences, lengths = pad_packed_sequence(sequence)
+    order = np.argsort(order)
+
+    return sequences[:, order], lengths[order]
