@@ -33,44 +33,6 @@ def num_params(module):
 
     return trainable, non_trainable
 
-def summarize(self, module, parameters='trainable', arguments=False, batch=False, children=False, max_width=120):
-        if children:
-            for c in module.children(): c.summarize(parameters, arguments, batch, children=False, max_width=max_width)
-
-        def _summary_table_helper(mode, parameters='trainable', node=None):
-            str_dict = {'trainable': 'Trainable', 'non-trainable': 'NON-Trainable', 'all': '', True: '(Trainable, NON-Trainable)'}
-            if mode == 'col': return str_dict[parameters] + ' Parameters'
-
-            def _get_num_params(module):
-                n = num_params(module) if module is not None else (0, 0)
-                n_dict = {'trainable': n[0], 'non-trainable': n[1], 'all': sum(n), True: n}
-                n = n_dict[parameters]
-                return ', '.join(['{:,}'] * len(n)).format(*n) if type(n) is tuple else '{:,}'.format(n)
-
-            if mode == 'row': return _get_num_params(node)
-
-            print('Total ' + str_dict[parameters] + ' Parameters:', _get_num_params(node))
-
-        header = ['Name', 'Shape']
-
-        shapes = None
-        if len(shapes) == 1: shapes = shapes[0]
-        row = [self.name, shapes]
-        if parameters is not False:
-            header.append(_summary_table_helper('col', parameters))
-            row.append(_summary_table_helper('row', parameters, module))
-        if arguments:
-            header.append('Arguments')
-            if isinstance(module, Node): row.append(module.get_args())
-            else: row.append('')
-
-        from beautifultable import BeautifulTable
-        table = BeautifulTable(max_width=max_width)
-        table.column_headers = header
-        input_row = ['Input', ]
-        table.append_row(row)
-        print(table)
-
 def get_output_shape(module, input_shape):
     from torch import no_grad, randn
 
