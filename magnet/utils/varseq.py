@@ -23,3 +23,9 @@ def unpack(sequence, order, as_list=False):
     if not as_list: return sequences, lengths
 
     return [sequence[:l.item()] for sequence, l in zip(sequences.transpose(0, 1), lengths)]
+
+def sort(sequences, order, dim=0):
+    return torch.index_select(sequences, dim, torch.tensor(order.copy(), device=sequences.device))
+
+def unsort(sequences, order, dim=0):
+    return torch.index_select(sequences, dim, torch.tensor(np.argsort(order.copy()), device=sequences.device))
