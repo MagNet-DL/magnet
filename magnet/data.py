@@ -136,6 +136,29 @@ class DataLoader(DataLoaderPyTorch):
     def __len__(self):
         return int(len(self.sampler) // self.batch_size)
 
+def pack_collate(batch, pack_dims='all'):
+    def len_tensor(tensor):
+        if len(tensor.shape) == 0: return 1
+        return len(tensor)
+
+    if torch.is_tensor(batch[0]):
+        if pack_dims is True:
+            batch, order = pack(batch)
+            return batch.to(mag.device), order
+
+        return default_collate(batch).to(mag.device)
+
+    if pack_dims == 'all': pack_dims = list(range(len(batch[0])))
+    elif pack_dims is None: pack_dims = []
+
+    if isinstance(batch[0], collections.Mapping):
+        return {key: pack_collate([d[key] for d in batch], i in pack_dims) for i, key in enumerate(batch[0])}
+    elif isinstance(batch[0], collections.Sequence):
+        transposed = zip(*batch)
+        return [pack_collate(samples, i in pack_dims) for i, samples in enumerate(transposed)]
+
+    return default_collate(batch)
+
 class Data:
     def __init__(self, path=None, **kwargs):
         if not hasattr(self, '_name'): self._name = self.__class__.__name__
@@ -144,7 +167,7 @@ class Data:
         self._path = path / self._name
         self._path.mkdir(parents=True, exist_ok=True)
         self._num_workers = kwargs.pop('num_workers', 0)
-        self._collate_fn = kwargs.pop('collate_fn', default_collate)
+        self._collate_fn = kwargs.pop('collate_fn', pack_collate)
         self._pin_memory = kwargs.pop('pin_memory', False)
         self._timeout = kwargs.pop('timeout', 0)
         self._worker_init_fn = kwargs.pop('worker_init_fn', None)
