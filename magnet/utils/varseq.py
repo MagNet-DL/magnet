@@ -15,8 +15,11 @@ def pack(sequences, lengths=None):
 
     return pack_padded_sequence(sequences, torch.tensor(lengths)), order
 
-def unpack(sequence, order):
+def unpack(sequence, order, as_list=False):
     sequences, lengths = pad_packed_sequence(sequence)
     order = np.argsort(order)
 
-    return sequences[:, order], lengths[order]
+    sequences = sequences[:, order]; lengths = lengths[order]
+    if not as_list: return sequences, lengths
+
+    return [sequence[:l.item()] for sequence, l in zip(sequences.transpose(0, 1), lengths)]
