@@ -190,7 +190,7 @@ class _RNNBase(Node):
         self._layer = mode
         super().__init__(n, h, b, bi, d, batch_first, act, **kwargs)
 
-    def build(self, x, h):
+    def build(self, x, h=None):
         if self._args['i'] is None: self._args['i'] =  x.shape[-1]
 
         self._layer = {'rnn': nn.RNN, 'lstm': nn.LSTM, 'gru': nn.GRU}[self._layer.lower()]
@@ -203,8 +203,8 @@ class _RNNBase(Node):
 
         super().build(x, h)
 
-    def forward(self, x, h):
-        return self._layer(x)
+    def forward(self, x, h=None):
+        return self._layer(x, h)
 
     def _mul_list(self, n):
         rnns = [self]

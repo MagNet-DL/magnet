@@ -5,6 +5,9 @@ from torch.nn.utils.rnn import pack_sequence, pad_packed_sequence, pack_padded_s
 def pack(sequences, lengths=None):
     from types import MethodType
 
+    n = len(sequences) if isinstance(sequences, (tuple, list)) else len(sequences[0])
+    shape = sequences[0].shape[1:] if isinstance(sequences, (tuple, list)) else sequences.shape[2:]
+
     if lengths is None:
         lengths = list(map(len, sequences))
         order = np.argsort(lengths)[::-1]
@@ -19,6 +22,7 @@ def pack(sequences, lengths=None):
 
     sequences.order = order
     sequences.unpack = MethodType(lambda self, as_list=False: unpack(self, as_list), sequences)
+    sequences.shape = torch.Size([-1, n] + list(shape))
     return sequences
 
 def unpack(sequence, as_list=False):
