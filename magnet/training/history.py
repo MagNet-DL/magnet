@@ -21,7 +21,7 @@ class History(dict):
 		if key is None:
 			for k in self.keys():
 				if 'val_' in k: continue
-				self.show(k, 'loss' in k, x_key, validation, legend=k, **kwargs)
+				self.show(k, 'loss' in k, x_key, validation, **kwargs)
 				plt.show()
 			return
 

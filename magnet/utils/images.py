@@ -3,13 +3,13 @@ import itertools
 import matplotlib.pyplot as plt
 import os
 
-from scipy.misc import imresize
+from skimage.transform import resize as imresize
 
 from torch import is_tensor
 
 def show_images(images, **kwargs):
     titles = kwargs.pop('titles', None)
-    pixel_range = kwargs.pop('pixel_range', (0, 255))
+    pixel_range = kwargs.pop('pixel_range', 'auto')
     cmap = kwargs.pop('cmap', None)
     shape = kwargs.pop('shape', 'square')
     resize = 'smean'
@@ -72,8 +72,12 @@ def show_images(images, **kwargs):
     if err_arg is not None:
         return err_arg
 
+    if cmap is None:
+        if len(images[0].shape) == 2 or (len(images[0].shape)  == 3 and images[0].shape[-1] == 1):
+            cmap = 'gray'
+
     images = _colorize_images(images)
-    images = [(image - pixel_range[0]) / (pixel_range[1] - pixel_range[0]) for image in images]
+    images = [(image - pixel_range[0]) / (pixel_range[1] - pixel_range[0]) * 2 - 1 for image in images]
     images = _resize_images(images, shape=resize)
     if not merge:
         fig, axes = plt.subplots(shape[0], shape[1])
@@ -117,7 +121,7 @@ def _colorize_images(images):
     return color_images
 
 
-def _resize_images(images, shape='smean', interp='bilinear', mode=None):
+def _resize_images(images, shape='smean', interp=1, mode='constant'):
     def _resolve_shape():
         nonlocal shape
         shapes = np.array([image.shape[:-1] for image in images])
@@ -154,7 +158,8 @@ def _resize_images(images, shape='smean', interp='bilinear', mode=None):
     if err_arg is not None:
         return err_arg
 
-    return [imresize(image, shape, interp, mode) for image in images]
+    shape = list(shape) + [3]
+    return [imresize(image, shape, interp, mode, anti_aliasing=False) for image in images]
 
 
 def _show_image(image, **kwargs):
@@ -186,7 +191,7 @@ def _show_image(image, **kwargs):
     if err_arg is not None:
         return err_arg
 
-    ax.imshow(image.astype(np.uint8), cmap, **kwargs)
+    ax.imshow(image, cmap, vmin=-1, vmax=1, **kwargs)
     if title is not None:
         ax.set_title(title)
     ax.set_xticks([])
