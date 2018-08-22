@@ -5,6 +5,7 @@ import os
 
 from scipy.misc import imresize
 
+from torch import is_tensor
 
 def show_images(images, **kwargs):
     titles = kwargs.pop('titles', None)
@@ -18,14 +19,15 @@ def show_images(images, **kwargs):
 
     def _handle_args():
         nonlocal images, pixel_range, shape, resize
-        if type(images) not in (list, tuple, np.ndarray, str):
+        if not isinstance(images, (list, tuple, np.ndarray, str)) and not is_tensor(images):
             raise TypeError('images needs to be a list, tuple, string or numpy array. Got {}'.format(type(images)))
+        if is_tensor(images):
+            images = list(images.permute(0, 2, 3, 1).detach().cpu().numpy())
         elif type(images) is str:
             from glob import glob
             images = [plt.imread(f) for f in glob(images, recursive=True)]
         elif type(images) is np.ndarray:
             images = list(images)
-
         elif type(images) in (list, tuple):
             if any(type(image) is not np.ndarray for image in images):
                 raise TypeError('All images need to be numpy arrays')
