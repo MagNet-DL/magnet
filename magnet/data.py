@@ -1,9 +1,12 @@
-import numpy as np
+import torch, collections, numpy as np
 
 from torch.utils.data.dataloader import DataLoader as DataLoaderPyTorch
 from torch.utils.data.dataloader import default_collate
 from torch.utils.data import Dataset as DatasetPyTorch
 from torch.utils.data.sampler import Sampler
+
+import magnet as mag
+from magnet.utils.varseq import pack
 
 def _get_data_dir():
     import os
@@ -136,7 +139,7 @@ class DataLoader(DataLoaderPyTorch):
     def __len__(self):
         return int(len(self.sampler) // self.batch_size)
 
-def pack_collate(batch, pack_dims='all'):
+def pack_collate(batch, pack_dims=None):
     def len_tensor(tensor):
         if len(tensor.shape) == 0: return 1
         return len(tensor)
@@ -244,13 +247,32 @@ def _from_dataset(train, val=None, test=None, val_split=0.2, **kwargs):
 
     return data
 
-def MNIST(val_split=0.2, path=DIR_DATA, **kwargs):
+def augmented_image_transforms(d=0, t=0, s=0, sh=0, ph=0, pv=0, resample=2):
     from torchvision import transforms
+
+    degrees = d
+    translate = None if t == 0 else (t, t)
+    scale = None if s == 0 else (1 - s, 1 + s)
+    shear = None if sh == 0 else sh
+    return transforms.Compose([transforms.RandomAffine(degrees, translate, scale, shear, resample),
+                               transforms.RandomHorizontalFlip(ph),
+                               transforms.RandomVerticalFlip(pv),
+                               transforms.ToTensor(),
+                               transforms.Normalize(*[[0.5] * 3] * 2)])
+
+def image_transforms(augmentation=0, direction='horizontal'):
+    x = augmentation
+    if direction == 'horizontal': ph = 0.25 * x; pv = 0
+    elif direction == 'vertical': ph = 0; pv = 0.25 * x
+    elif direction == 'both': ph = 0.25 * x; pv = 0.25 * x
+    return augmented_image_transforms(d=45 * x, t=0.25 * x, s=0.13 * x, sh=6 * x, ph=ph, pv=pv)
+
+def MNIST(val_split=0.2, path=DIR_DATA, **kwargs):
     from torchvision.datasets import mnist
 
     dataset = {mode: mnist.MNIST(path, train=(mode == 'train'), download=True)
                         for mode in ('train', 'test')}
-    transforms = kwargs.pop('transforms', transforms.Compose([transforms.ToTensor(), transforms.Normalize(*[[0.5] * 3] * 2)]))
+    transforms = kwargs.pop('transforms', image_transforms())
     return Data.make(**dataset, val_split=val_split, transforms=transforms)
 
 wiki = {'mnist': MNIST}
