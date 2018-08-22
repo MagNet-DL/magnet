@@ -33,6 +33,7 @@ def eval(*modules):
 @contextmanager
 def _eval_context_manager(*modules):
 	states = []
+	modules = [module for module in modules if module.training]
 	for module in modules:
 		states.append(module.training)
 		module.eval()
