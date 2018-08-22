@@ -53,6 +53,13 @@ class Monitor:
 		elif signal == 'save_state':
 			self.save_state(kwargs.pop('path'))
 
+	def show(self, metric=None, log=False, x_key='epochs', **kwargs):
+		self.history.show(metric, log, x_key, **kwargs)
+
+	def __repr__(self):
+		self.show()
+		return ''
+
 	def load_state(self, path):
 		from magnet.training.utils import load_object
 		self.history = load_object(path / self.name / 'history.p', default=self.history)

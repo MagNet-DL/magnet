@@ -1,3 +1,5 @@
+from magnet.utils.plot import smooth_plot
+
 class History(dict):
 	def find(self, key):
 		return {k: self[k] for k in self.keys() if key in k}
@@ -11,18 +13,21 @@ class History(dict):
 			self[key] = SnapShot(buffer_size)
 			self[key].append(value, buffer=(buffer_size is not None), **stamps)
 
-	def show(self, key=None, log=False, x_key=None, validation=True, legend=None, ax=None):
+	def show(self, key=None, log=False, x_key=None, validation=True, legend=None, **kwargs):
 		from matplotlib import pyplot as plt
+
+		ax = kwargs.pop('ax', None)
 
 		if key is None:
 			for k in self.keys():
-				self.show(k, log, x_key, xlabel, validation, label=k)
+				if 'val_' in k: continue
+				self.show(k, 'loss' in k, x_key, validation, legend=k, **kwargs)
 				plt.show()
 			return
 
 		if ax is None: fig, ax = plt.subplots()
 		label = 'training' if legend is None else legend
-		self[key].show(ax, x_key, label=label)
+		self[key].show(ax, x_key, label=label, **kwargs)
 
 		if validation:
 			try:
@@ -91,11 +96,13 @@ class SnapShot:
 	def __getitem__(self, index):
 		return self._snaps[index]['val']
 
-	def show(self, ax, x=None, label=None):
+	def show(self, ax, x=None, label=None, **kwargs):
 		if x is None:
 			x = list(range(len(self)))
 			y = self._retrieve()
 		else:
 			x, y = self._retrieve(stamp=x)
 
-		if len(x) != 0: ax.plot(x, y, label=label)
+		if len(x) != 0: 
+			line, = ax.plot(x, y, alpha=0.3)
+			smooth_plot(x, y, label=label, ax=ax, c=line.get_color(), **kwargs)
