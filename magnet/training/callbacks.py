@@ -15,7 +15,7 @@ class Monitor:
 
 	def __call__(self, trainer, signal, **kwargs):
 		if signal == 'on_training_start':
-			from magnet._utils import get_tqdm; tqdm = get_tqdm()
+			from magnet.utils.misc import get_tqdm; tqdm = get_tqdm()
 
 			if self.show_progress:
 				self.progress_bar = tqdm(total=kwargs.pop('total_iterations'), unit_scale=True,

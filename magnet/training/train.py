@@ -89,7 +89,7 @@ class Trainer:
 
 class SupervisedTrainer(Trainer):
     def __init__(self, model, optimizer='adam', loss='cross_entropy', metrics=[]):
-        from magnet.functional import wiki
+        from magnet.nodes.functional import wiki
         from torch.nn import functional as F
 
         if isinstance(optimizer, str): optimizer = optimizer_wiki[optimizer.lower()](model.parameters())

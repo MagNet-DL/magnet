@@ -1,5 +1,5 @@
 from torch.nn  import functional as F
-from magnet.functional import activations, losses, metrics
+from magnet.nodes.functional import activations, losses, metrics
 
 dimensional_function = lambda f_list, *args, **kwargs: f_list[len(args[0].size()) - 3](*args, **kwargs)
 

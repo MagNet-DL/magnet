@@ -1,3 +1,9 @@
+try:
+    get_ipython()
+    in_notebook = True
+except:
+    in_notebook = False
+
 def caller_locals(ancestor=False):
     """Print the local variables in the caller's frame."""
     import inspect
@@ -72,8 +78,5 @@ def get_tqdm():
     """
     import tqdm
 
-    try:
-        get_ipython()
-        return getattr(tqdm, 'tqdm_notebook')
-    except:
-        return getattr(tqdm, 'tqdm')
+    mode = 'tqdm_notebook' if in_notebook else 'tqdm'
+    return getattr(tqdm, mode)

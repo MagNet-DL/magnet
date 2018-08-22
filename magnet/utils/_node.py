@@ -4,7 +4,7 @@ def summarize(module, x, parameters='trainable', arguments=False, batch=False, m
     from torch.nn import Sequential
     from beautifultable import BeautifulTable
     from magnet.nodes import Node
-    from magnet._utils import num_params
+    from magnet.utils.misc import num_params
 
     def _handle_parameter_output(mode, node=None):
         str_dict = {'trainable': 'Trainable', 'non-trainable': 'NON-Trainable', 'all': '', True: '(Trainable, NON-Trainable)'}
