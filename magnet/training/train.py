@@ -40,13 +40,16 @@ class Trainer:
 
         if path is None:
             from pathlib import Path
-            path = Path('.mock_trainer')
+            from tempfile import gettempdir
+            path = Path(gettempdir()) / '.mock_trainer'
 
+        rmtree(path, ignore_errors=True)
         self.save_state(path)
-        yield
-        self.load_state(path)
-
-        rmtree(path)
+        try:
+            yield
+        finally:
+            self.load_state(path)
+            rmtree(path)
 
     def epochs(self, mode=None):
         if mode is None:
