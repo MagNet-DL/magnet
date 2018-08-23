@@ -1,9 +1,36 @@
+# coding=utf-8
 from torch import nn
 
 from .nodes import Node
 
 class Lambda(Node):
+    r"""Wraps a Node around any function.
+
+        Args:
+            fn (callable): The function which gets called in the forward pass
+
+        Examples::
+            >>> import magnet.nodes as mn
+            >>>
+            >>> import torch
+            >>>
+            >>> model = mn.Lambda(lambda x: x.mean())
+            >>>
+            >>> model(torch.arange(5, dtype=torch.float)).item()
+            >>> # Output: 2.0
+            >>>
+            >>> def subtract(x, y):
+            >>>     return x - y
+            >>>
+            >>> model = mn.Lambda(subtract)
+            >>>
+            >>> model(2 * torch.ones(1), torch.ones(1)).item()
+            >>> # Output: 1.0
+        """
+
     def __init__(self, fn, **kwargs):
+        from magnet.utils.misc import get_function_name
+
         super().__init__(fn, **kwargs)
 
         if self.name == self.__class__.__name__:
