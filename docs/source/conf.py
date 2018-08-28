@@ -17,7 +17,11 @@ import sys
 print(str(Path(__file__).resolve().parents[2]))
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
+# -- Imports -----------------------------------------------------------------
 
+import sphinx_rtd_theme
+
+from magnet.debug import Babysitter
 # -- Project information -----------------------------------------------------
 
 project = 'MagNet'
@@ -41,10 +45,46 @@ release = '0.1'
 # ones.
 extensions = [
     'sphinx.ext.autodoc',
+    'sphinx.ext.autosummary',
+    'sphinx.ext.doctest',
     'sphinx.ext.intersphinx',
-    'sphinx.ext.mathjax',
+    'sphinx.ext.todo',
+    'sphinx.ext.coverage',
+    'sphinx.ext.napoleon',
     'sphinx.ext.viewcode',
+    'sphinxcontrib.katex',
 ]
+
+# katex (mathjax replacement) macros
+#
+#
+
+katex_macros = r'''
+"\\op": "\\operatorname{{#1}}",
+"\\i": "\\mathrm{i}",
+"\\e": "\\mathrm{e}^{#1}",
+"\\w": "\\omega",
+"\\vec": "\\mathbf{#1}",
+"\\x": "\\vec{x}",
+"\\d": "\\operatorname{d}\\!{}",
+"\\dirac": "\\operatorname{\\delta}\\left(#1\\right)",
+"\\scalarprod": "\\left\\langle#1,#2\\right\\rangle",
+'''
+
+# katex options
+#
+#
+
+katex_options = r'''
+delimiters : [
+   {left: "$$", right: "$$", display: true},
+   {left: "\\(", right: "\\)", display: true},
+   {left: "\\[", right: "\\]", display: true}
+],
+strict : false
+'''
+
+napoleon_use_ivar = True
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ['_templates']
@@ -73,18 +113,24 @@ exclude_patterns = []
 # The name of the Pygments (syntax highlighting) style to use.
 pygments_style = 'sphinx'
 
+# Disable docstring inheritance
+autodoc_inherit_docstrings = False
+
+autodoc_default_options = {
+    'member-order': 'bysource',
+}
 
 # -- Options for HTML output -------------------------------------------------
 
 # The theme to use for HTML and HTML Help pages.  See the documentation for
 # a list of builtin themes.
 #
-html_theme = 'alabaster'
+html_theme = 'sphinx_rtd_theme'
+html_theme_path = [sphinx_rtd_theme.get_html_theme_path()]
 
 # Theme options are theme-specific and customize the look and feel of a theme
 # further.  For a list of options available for each theme, see the
 # documentation.
-#
 # html_theme_options = {}
 
 # Add any paths that contain custom static files (such as style sheets) here,
@@ -101,7 +147,6 @@ html_static_path = ['_static']
 # 'searchbox.html']``.
 #
 # html_sidebars = {}
-
 
 # -- Options for HTMLHelp output ---------------------------------------------
 
@@ -165,4 +210,8 @@ texinfo_documents = [
 # -- Options for intersphinx extension ---------------------------------------
 
 # Example configuration for intersphinx: refer to the Python standard library.
-intersphinx_mapping = {'https://docs.python.org/': None}
+intersphinx_mapping = {
+    'python': ('https://docs.python.org/', None),
+    'numpy': ('http://docs.scipy.org/doc/numpy/', None),
+    'torch': ('https://pytorch.org/docs/stable/', None),
+}

@@ -10,7 +10,20 @@ Welcome to MagNet's documentation!
    :maxdepth: 2
    :caption: Contents:
    
+   magnet
+   data
+   data.core
+   data.transforms
    nodes
+   training
+   training.history
+   training.utils
+   training.callbacks
+   utils
+   utils.images
+   utils.plot
+   utils.varseq
+
 
 Indices and tables
 ==================

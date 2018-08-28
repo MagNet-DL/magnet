@@ -2,19 +2,25 @@ Nodes
 ===================================
 
 .. automodule:: magnet.nodes
-.. currentmodule:: magnet.nodes
 
 Node
 ----------
 
 .. autoclass:: Node
 
-Containers
+Core
 ----------------------------------
-
-.. currentmodule:: magnet.nodes
-
-Lambda
-----------
 .. autoclass:: Lambda
+
+.. autoclass:: Conv
+
+.. autoclass:: Linear
+
+.. autoclass:: RNN
+
+.. autoclass:: LSTM
+
+.. autoclass:: GRU
+
+.. autoclass:: BatchNorm
 
