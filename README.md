@@ -1,10 +1,21 @@
 <div align="center">
   <img src="assets/logo.png" alt="MagNet Logo"/> <img src="assets/logo-text.png" alt="MagNet Logo Text"/>
   <h2>Deep Learning Projects that Build Themselves</h2>
+</div>
+
+[![GitHub](https://img.shields.io/github/license/mashape/apistatus.svg)](https://github.com/svaisakh/magnet/blob/master/LICENSE)
+[![GitHub (pre-)release](https://img.shields.io/github/release/qubyte/rubidium/all.svg)](https://github.com/svaisakh/magnet/releases)
+[![Documentation Status](https://readthedocs.org/projects/magnet-dl/badge/?version=latest)](https://magnet-dl.readthedocs.io/en/latest/?badge=latest)
+[![Gitter](https://img.shields.io/gitter/room/nwjs/nw.js.svg)](https://gitter.im/MagNet-DL/Contributors?utm_source=share-link&utm_medium=link&utm_campaign=share-link)
+[![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg?style=flat)](https://github.com/svaisakh/magnet/pulls)
+
+<div align="center">
   <br>
   <img src="assets/mnist.gif" alt="MNIST QuickStart"/>
-  MNIST in a few lines.
+
+  MNIST in 15 seconds.
 </div>
+
 
 <hr>
 Dear Friend,
@@ -363,7 +374,21 @@ Same code here
 
 <hr>
 
-# Getting Your Hands on a Copy of MagNet
+## Why you need to start using MagNet
+
+- **Intelligent.** MagNet's Nodes are alive and aware. Intelligent.
+  You don't build the graph, the graph builds itself.
+- **Simple.** MagNet's API is designed to make sense.
+  You first get the data in a helpful container, define the model and the training.
+  Train. Debug. Repeat.
+- **Extensible.** The API is designed to be extended and to match your needs.
+  Since the codebase is PyTorch, MagNet can also mix with lower-level details.
+- **Ready.** The Trainer can accommodate any training logic, however complex.
+  This means that you can do almost any _never-before-seen_ experiment with
+  all the features and comforts that MagNet has to offer.
+
+# Getting Your Hands on a Copy
+
 
 Clone the MagNet repository by running
 
@@ -400,12 +425,25 @@ Read the documentation at http://magnet-dl.readthedocs.io/
 
 **Hurry! Clone Now**
 
-<hr>
+## Getting Started
+These Jupyter Notebooks should help you get up and running with MagNet:
 
-# How You Can Help
+* [Training an AI to Recognize Handwritten Digits in a Second](Notebooks/MNIST-Quickstart.ipynb)
+
+## How You Can Help
 
 I'm actively looking for contributors who can help propel this forward.
 
 Lots of Node building, Data loading, Trainer watching and Bug squashing to be done.
 
 A world of magic awaits anyone who dare enter.
+
+Join us on Gitter. [![Gitter](https://img.shields.io/gitter/room/nwjs/nw.js.svg)](https://gitter.im/MagNet-DL/Contributors?utm_source=share-link&utm_medium=link&utm_campaign=share-link)
+
+<div align="center">
+  Handcrafted with ❤ by Vaisakh
+ </div>
+
+ <br><br>
+ <hr>
+ <sub>Created my free logo at LogoMakr.com</sub>
