@@ -8,11 +8,62 @@ from skimage.transform import resize as imresize
 from torch import is_tensor
 
 def show_images(images, **kwargs):
+    r"""A nifty helper function to show images represented by tensors.
+
+    Args:
+        images (list or numpy.ndarray or str or torch.Tensor): The images
+            to show
+
+    * :attr:`images` can be anything which from you could conceivable harvest
+      an image.
+
+      If it's a :py:class:`torch.Tensor`, it is converted to
+      a :py:class:`numpy.ndarray`.
+
+      The first dimension of the tensor is treated as a batch dimension.
+
+      If it's a ``str``, it is treated as a glob path from which all images
+      are extracted.
+
+      More commonly, a list of numpy arrays can be given.
+
+    Keyword Arguments:
+        pixel_range (tuple or ``'auto'``): The range of pixel values
+            to be expected. Default: ``'auto'``
+        cmap (str or None): The color map for the plots. Default: ``None``
+        merge (bool): If ``True``, all images are merged into one giant image.
+            Default: ``True``
+        titles (list or None): The titles for each image. Default: ``None``
+        shape (str): The shape of the merge tile.
+            Default: ``'square'``
+        resize (str): The common shape to which images are resized.
+            Default: ``'smean'``
+        retain (bool): If ``True``, the plot is retained. Default: ``False``
+        savepath (str or None): If given, the image is saved to this path.
+            Default: ``None``
+
+    * :attr:`pixel_range` default to the range in the image.
+
+    * :attr:`cmap` is set to ``'gray'`` if the images are B/W.
+
+    * :attr:`titles` should only be given if :attr:`merge` is ``True``.
+
+    .. note::
+        The merge shape is controlled by :attr:`shape` which can be either
+        ``'square'``, ``'row'``, ``'column'`` or a ``tuple`` which explicitly
+        specifies this shape.
+
+        ``'square'`` automatically finds a shape with least difference between
+        the number of rows and columns. This is aesthetically pleasing.
+
+        In the explicit case, the product of the tuple needs to equal the
+        number of images.
+    """
     titles = kwargs.pop('titles', None)
     pixel_range = kwargs.pop('pixel_range', 'auto')
     cmap = kwargs.pop('cmap', None)
     shape = kwargs.pop('shape', 'square')
-    resize = 'smean'
+    resize = kwargs.pop('resize', 'smean')
     merge = kwargs.pop('merge', True)
     retain = kwargs.pop('retain', False)
     savepath = kwargs.pop('savepath', None)

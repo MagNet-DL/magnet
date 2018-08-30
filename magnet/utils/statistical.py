@@ -4,7 +4,6 @@ import numpy as np
 from scipy.signal import savgol_filter
 from scipy import interpolate
 
-
 def find_outliers(data, threshold=3.5, window_fraction=0.15):
     """Based on http://www.itl.nist.gov/div898/handbook/eda/section3
     /eda35h.htm """

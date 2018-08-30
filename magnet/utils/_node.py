@@ -1,6 +1,30 @@
 import magnet as mag
 
 def summarize(module, x, parameters='trainable', arguments=False, batch=False, max_width=120):
+    r"""Prints a pretty picture of how a one-input one output sequential model works.
+
+    Similar to ``Model.summarize`` found in Keras.
+
+    Args:
+        module (``nn.Module``): The module to summarize
+        x (``torch.Tensor``): A sample tensor sent as input to
+            the :attr:`module`.
+        parameters (str or True): Which kind of parameters to enumerate.
+            Default: ``'trainable'``
+        arguments (bool): Whether to show the arguments to a node.
+            Default: ``False``
+        batch (bool): Whether to show the batch dimension in the shape.
+            Default: ``False``
+        max_width (int): The maximum width of the table. Default: ``120``
+
+    * :attr:`parameters` is one of [``'trainable'``, ``'non-trainable'``,
+      ``'all'``, ``True``].
+
+      `'trainable'` parameters are the ones which require gradients and
+      can be optimized by SGD.
+
+      Setting this to ``True`` will print both types as a tuple.
+    """
     from torch.nn import Sequential
     from beautifultable import BeautifulTable
     from magnet.nodes import Node
