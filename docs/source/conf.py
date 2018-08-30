@@ -22,6 +22,10 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 import sphinx_rtd_theme
 
 from magnet.debug import Babysitter
+
+# Needed to avoid _tkinter imports
+import matplotlib
+matplotlib.use('agg')
 # -- Project information -----------------------------------------------------
 
 project = 'MagNet'

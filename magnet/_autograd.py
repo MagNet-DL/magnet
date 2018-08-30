@@ -11,11 +11,12 @@ def eval(*modules):
     r"""A Context Manger that makes it easy to run
     computations in ``eval`` mode.
 
-    It sets modules in their ```eval`` mode and ensures
+    It sets modules in their ``eval`` mode and ensures
     that gradients are not computed.
 
-    This is a more wholesome option than torch.no_grad() since many Modules
-    (BatchNorm, Dropout etc.) behave differently while training and testing.
+    This is a more wholesome option than :py:meth:`torch.no_grad`
+    since many Modules (BatchNorm, Dropout etc.) behave
+    differently while training and testing.
 
     Examples::
 

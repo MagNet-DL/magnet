@@ -262,7 +262,7 @@ class SnapShot:
           ``'training'`` and ``'validation'`` are applied respectively.
 
         Keyword Args:
-             : See :py:meth:`History.show` for more details.
+             (): See :py:meth:`History.show` for more details.
 
         .. note::
             Any further keyword arguments are passed to the plot function.

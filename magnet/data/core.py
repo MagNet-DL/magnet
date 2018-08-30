@@ -1,7 +1,7 @@
 from . import data
 from .transforms import image_transforms
 
-def MNIST(val_split=0.2, path=data.DIR_DATA, **kwargs):
+def MNIST(val_split=0.2, path=None, **kwargs):
     r"""The MNIST Dataset.
 
     Args:
@@ -14,6 +14,8 @@ def MNIST(val_split=0.2, path=data.DIR_DATA, **kwargs):
         (): See ``Data`` for more details.
     """
     from torchvision.datasets import mnist
+
+    if path is None: path = data.DIR_DATA
 
     dataset = {mode: mnist.MNIST(path, train=(mode == 'train'), download=True)
                         for mode in ('train', 'test')}

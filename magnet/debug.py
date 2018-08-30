@@ -13,7 +13,7 @@ def overfit(trainer, data, batch_size, epochs=1, metric='loss', **kwargs):
     This usually gives an insight on what to expect from the actual training.
 
     Args:
-        trainer (magnet.trainer.Trainer): The Trainer object
+        trainer (magnet.training.Trainer): The Trainer object
         data (magnet.data.Data): The data object used for training
         batch_size (int): The intended batch size
         epochs (float): The expected epochs for convergence for 1% of the data.
@@ -96,7 +96,7 @@ def overfit(trainer, data, batch_size, epochs=1, metric='loss', **kwargs):
 def check_flow(trainer, data):
     r"""Checks if any trainable parameter is not receiving gradients.
 
-    Super useful for large architectures that use the .detach() function.
+    Super useful for large architectures that use the :py:meth:`detach` function
 
     Args:
         trainer (magnet.trainer.Trainer): The Trainer object
@@ -126,7 +126,7 @@ class Babysitter:
 
     Args:
         frequency (int): Then number of times per epoch to monitor.
-            Default: 10
+            Default: :math:`10`
 
     Keyword Args:
         name (str): Name of this callback. Default: ``'babysitter'``

@@ -37,7 +37,7 @@ def show_images(images, **kwargs):
         shape (str): The shape of the merge tile.
             Default: ``'square'``
         resize (str): The common shape to which images are resized.
-            Default: `smean`
+            Default: ``'smean'``
         retain (bool): If ``True``, the plot is retained. Default: ``False``
         savepath (str or None): If given, the image is saved to this path.
             Default: ``None``

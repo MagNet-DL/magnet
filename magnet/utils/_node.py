@@ -17,7 +17,8 @@ def summarize(module, x, parameters='trainable', arguments=False, batch=False, m
             Default: ``False``
         max_width (int): The maximum width of the table. Default: ``120``
 
-    * :attr:`parameters` is one of ['trainable', 'non-trainable', 'all', True].
+    * :attr:`parameters` is one of [``'trainable'``, ``'non-trainable'``,
+      ``'all'``, ``True``].
 
       `'trainable'` parameters are the ones which require gradients and
       can be optimized by SGD.

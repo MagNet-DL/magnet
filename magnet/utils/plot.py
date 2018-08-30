@@ -11,9 +11,9 @@ def smooth_plot(*args, **kwargs):
 
     Keyword Args:
         window_fraction (float): The fraction of the data to use as window
-            to the smoothener. Default: ``0.3``
+            to the smoothener. Default: :math:`0.3`
         gain (float): The amount of artificial datapoints inserted per raw
-            datapoint. Default: 10
+            datapoint. Default: :math:`10`
         replace_outliers (bool): If ``True``, replaces outlier datapoints
             by a sensible value. Default: ``True``
         ax (Pyplot axes object): The axis to plot onto. Default: ``None``

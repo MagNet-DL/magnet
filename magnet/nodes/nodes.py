@@ -10,23 +10,23 @@ from magnet.utils.misc import caller_locals, get_function_name
 class Node(nn.Module):
     r"""Abstract base class that defines MagNet's Node implementation.
 
-        A Node is a 'self-aware Module'.
+        A Node is a *'self-aware Module'*.
         It can dynamically parametrize itself in runtime.
 
-        For instance, a Linear Node can infer the input features automatically
-        when first called; a Conv Node can infer the dimensionality (1, 2, 3)
-        of the input automatically.
+        For instance, a ``Linear`` Node can infer the input features
+        automatically when first called; a ``Conv`` Node can infer the
+        dimensionality (1, 2, 3) of the input automatically.
 
         MagNet's Nodes strive to help the developer as much as possible by
         finding the right hyperparameter values automatically.
         Ideally, the developer shouldn't need to define anything
         except the basic architecture and the inputs and outputs.
 
-        The arguments passed to the constructor are stored in a _args attribute
-        as a dictionary.
+        The arguments passed to the constructor are stored in a ``_args``
+        attribute as a dictionary.
 
-        This is later modified by the build() method which get's automatically
-        called on the first forward pass.
+        This is later modified by the :py:meth:`build` method which gets
+        automatically called on the first forward pass.
 
         Keyword Args:
             name (str) - A printable name for this node. Default: Class Name
@@ -38,7 +38,7 @@ class Node(nn.Module):
         self._built = False
 
     def build(self, *args, **kwargs):
-        """ Builds the Node.
+        r"""Builds the Node.
         Ideally, should not be called manually.
 
         When an unbuilt module is first called, this method gets invoked.

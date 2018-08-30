@@ -54,39 +54,39 @@ class Conv(Node):
 
     Args:
         c (int): Number of channels produced by the convolution.
-        Default: Inferred
-        k (int or tuple): Size of the convolving kernel. Default: 3
+            Default: Inferred
+        k (int or tuple): Size of the convolving kernel. Default: ``3``
         p (int, tuple or str): Zero-padding added to both sides
-        of the input. Default: ``'half'``
-        s (int or tuple): Stride of the convolution. Default: 1
-        d (int or tuple): Spacing between kernel elements. Default: 1
+            of the input. Default: ``'half'``
+        s (int or tuple): Stride of the convolution. Default: ``1``
+        d (int or tuple): Spacing between kernel elements. Default: ``1``
         g (int): Number of blocked connections from input channels
-        to output channels. Default: 1
+            to output channels. Default: ``1``
         b (bool): If ``True``, adds a learnable bias to the output.
-        Default: ``True``
+            Default: ``True``
         ic (int): Number of channels in the input image.
-        Default: Inferred
+            Default: Inferred
         act (str or None): The activation function to use.
-        Default: ``'relu'``
+            Default: ``'relu'``
 
-    * :attr:`p` can be conveniently used for 'half', 'same' or 'double'
-      padding to half, same or double the image size respectively.
+    * :attr:`p` can be conveniently used for ``'half'``, ``'same'`` or
+      ``'double'`` padding to half, same or double the image size respectively.
       The arguments are accordingly inferred at runtime.
-      For 'half' padding, the output channels (if not provided)
+      For ``'half'`` padding, the output channels (if not provided)
       are set to twice the input channels to make up for the lost
       information and vice-versa for the double padding.
-      For 'same' padding, the output channels are kept equal to the
+      For ``'same'`` padding, the output channels are kept equal to the
       input channels.
-      In all three cases, the dilation is set to 1 and the stride
+      In all three cases, the dilation is set to ``1`` and the stride
       is modified as required.
 
     * :attr:`c` is inferred from the second dimension of the
       input tensor.
 
-    * :attr:`act` is set to 'relu' by default unlike the PyTorch
+    * :attr:`act` is set to ``'relu'`` by default unlike the PyTorch
       implementation where activation functions need to be seperately
       defined.
-      Take caution to manually set the activation to None, where needed.
+      Take caution to manually set the activation to ``None``, where needed.
 
     .. note::
 
@@ -96,7 +96,7 @@ class Conv(Node):
     .. note::
 
          One can also create multiple Nodes using the convinient
-         multiplication (*) operation.
+         multiplication (``*``) operation.
 
          Multiplication with an integer :math:`n`, gives :math:`n`
          copies of the Node.
@@ -229,15 +229,15 @@ class Linear(Node):
     r"""Applies a linear transformation to the incoming tensor
 
     Args:
-        o (int, Required): Output dimensions
+        o (int or tuple, Required): Output dimensions
         b (bool): Whether to include a bias term. Default: ``True``
         flat (bool): Whether to flatten out the input to 2 dimensions.
-        Default: ``True``
+            Default: ``True``
         i (int): Input dimensions. Default: Inferred
         act (str or None): The activation function to use.
-        Default: ``'relu'``
+            Default: ``'relu'``
         bn (bool): Whether to use Batch Normalization immediately after
-        the layer. Default: ``False``
+            the layer. Default: ``False``
 
     * :attr:`flat` is used by default to flatten the input to a vector.
       This is useful, say in the case of CNNs where an 3-D image based
@@ -262,6 +262,11 @@ class Linear(Node):
         Multiplication with a list or tuple of integers,
         :math:`(o_1, o_2, ..., o_n)` gives :math:`n` copies
         of the Node with :attr:`o` set to :math:`o_i`
+
+    .. note::
+
+        If :attr:`o` is a tuple, the output features are its product
+        and the output is inflated to this shape.
 
     Shape:
         If :attr:`flat` is True
@@ -404,16 +409,17 @@ class RNN(_RNNBase):
 
     Args:
         h (int, Required): The number of features in the hidden state `h`
-        n (int):  Number of layers. Default: 1
+        n (int):  Number of layers. Default: ``1``
         b (bool): Whether to include a bias term. Default: ``True``
         bi (bool): If ``True``, becomes a bidirectional RNN.
-        Default: ``False``
+            Default: ``False``
         act (str or None): The activation function to use.
-        Default: ``'tanh'``
+            Default: ``'tanh'``
         d (int): The dropout probability of the outputs of each layer.
-        Default: 0
+            Default: ``0``
         batch_first (False): If ``True``, then the input and output
-        tensors are provided as `(batch, seq, feature)`. Default: ``False``
+            tensors are provided as ``(batch, seq, feature)``.
+            Default: ``False``
         i (int): Input dimensions. Default: Inferred
 
     * :attr:`i` is inferred from the last dimension of the
@@ -479,14 +485,14 @@ class BatchNorm(Node):
 
     Args:
         e (float): A small value added to the denominator
-        for numerical stability. Default: 1e-5
+            for numerical stability. Default: ``1e-5``
         m (float or None): The value used for the running_mean
-        and running_var computation. Can be set to ``None`` for
-        cumulative moving average (i.e. simple average). Default: 0.1
+            and running_var computation. Can be set to ``None`` for
+            cumulative moving average (i.e. simple average). Default: ``0.1``
         a (bool): Whether to have learnable affine parameters.
-        Default: ``True``
+            Default: ``True``
         track (bool): Whether to track the running mean and variance.
-        Default: ``True``
+            Default: ``True``
         i (int): Input channels. Default: Inferred
 
     * :attr:`i` is inferred from the second dimension of the
@@ -515,7 +521,7 @@ class BatchNorm(Node):
         - Output: :math:`(N, C, *)` (same shape as input)
 
     Attributes:
-        layer (nn.Module): The BatchNorm module built from torch.nn
+        layer (nn.Module): The BatchNorm module built from :py:class:`torch.nn`
 
     Examples::
 

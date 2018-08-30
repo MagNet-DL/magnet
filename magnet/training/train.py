@@ -64,11 +64,11 @@ class Trainer:
                 over the training set
             epochs (float or int): The number of epochs to train for.
                 Default: ``1``
-            callbacks (list): Any callbacks to be attached. Default: []
+            callbacks (list): Any callbacks to be attached. Default: ``[]``
 
         Keyword Args:
-            iterations (int): The number of iterations to train for
-            Overrides :attr:`epochs`.
+            iterations (int): The number of iterations to train for.
+                Overrides :attr:`epochs`.
 
         .. note::
             PyTorch ``DataLoader`` s are not supported.
@@ -104,7 +104,7 @@ class Trainer:
 
         Args:
             path (pathlib.Path): The path to save temporary states into
-                Default: {System temp directory}/.mock_trainer
+                Default: ``{System temp directory}/.mock_trainer``
         """
         from shutil import rmtree
 
@@ -288,7 +288,7 @@ def finish_training(path, names=None):
     Args:
         path (pathlib.Path): The path where the trainer was checkpointed
         names (list): The names of the models in the order given to the trainer.
-            Default: None
+            Default: ``None``
 
     * :attr:`names` can be used if the models themselves did not have names
       prior to training.

@@ -140,7 +140,7 @@ class Validate:
     Often, this is done during training in order to view the simultaneous
     learning on the validation set and catch any overfitting / underfitting.
 
-    This callback enables you to run a custom :py:meth`validate` function
+    This callback enables you to run a custom ``validate`` function
     over a :attr:`dataloader`.
 
     Args:
@@ -315,7 +315,8 @@ class ColdStart:
     prior to any training. This callback freezes the training initially.
 
     Args:
-        epochs (float): The number of epochs to freeze the trainer. Default: 0.1
+        epochs (float): The number of epochs to freeze the trainer.
+            Default: :math:`0.1`
 
     Keyword Args:
         name (str): Name of this callback. Default: ``'coldstart'``

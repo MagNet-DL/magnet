@@ -7,6 +7,8 @@ Node
 ----------
 
 .. autoclass:: Node
+   :members: build, _mul_list
+   :member-order: bysource
 
 Core
 ----------------------------------

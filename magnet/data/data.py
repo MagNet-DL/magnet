@@ -3,15 +3,17 @@ import numpy as np
 import magnet as mag
 
 def _get_data_dir():
-    import os
+    import os, warnings
     from pathlib import Path
 
-    DIR_DATA = os.environ.get('MAGNET_DATAPATH')
+    DIR_DATA = os.environ.get('MAGNET_DATAPATH', '~/.data')
     if DIR_DATA is None:
-        raise RuntimeError('You need to have an environment variable called MAGNET_DATAPATH. Add this to your .bashrc file:\nexport MAGNET_DATAPATH=<path>\n'
-                            'Where <path> is the desired path where all MagNet datasets are stored by default.')
+        warnings.warn('You need to have an environment variable called MAGNET_DATAPATH. Add this to your .bashrc file:\nexport MAGNET_DATAPATH=<path>\n'
+                            'Where <path> is the desired path where all MagNet datasets are stored by default.', RuntimeError)
 
-    return Path(DIR_DATA)
+    DIR_DATA = Path(DIR_DATA).expanduser()
+    DIR_DATA.mkdir(parents=True, exist_ok=True)
+    return DIR_DATA
 
 DIR_DATA = _get_data_dir()
 
