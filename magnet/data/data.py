@@ -19,9 +19,49 @@ from . import core
 wiki = {'mnist': core.MNIST}
 
 class Data:
-    def __init__(self, **kwargs):
+    r"""A container which holds the Training, Validation
+    and Test Sets and provides DataLoaders on call.
+
+    This is a convenient abstraction which is used
+    downstream with the Trainer and various debuggers.
+
+    It works in tandem with the custom Dataset, DataLoader and Sampler
+    sub-classes that MagNet defines.
+
+    Args:
+        train (``Dataset``): The training set
+        val (``Dataset``): The validation set. Default: ``None``
+        test (``Dataset``): The test set. Default: ``None``
+        val_split (float): The fraction of training data to hold out
+            as validation if validation set is not given. Default: ``0.2``
+
+    Keyword Args:
+        num_workers (int): how many subprocesses to use for data
+            loading. 0 means that the data will be loaded in the main process.
+            Default: ``0``
+        collate_fn (callable): merges a list of samples to form a mini-batch
+            Default: :py:meth:`pack_collate`
+        pin_memory (bool): If ``True``, the data loader will copy tensors
+            into CUDA pinned memory before returning them. Default: ``False``
+        timeout (numeric): if positive, the timeout value for collecting a batch
+            from workers. Should always be non-negative. Default: ``0``
+        worker_init_fn (callable): If not ``None``, this will be called on each
+            worker subprocess with the worker id
+            (an int in ``[0, num_workers - 1]``) as input, after seeding and
+            before data loading. Default: ``None``
+        transforms (list or callable): A list of transforms to be applied to
+            each datapoint. Default: ``None``
+        fetch_fn (callable): A function which is applied to each datapoint
+            before collating. Default: ``None``
+    """
+    def __init__(self, train, val=None, test=None, val_split=0.2, **kwargs):
         from .dataloader import pack_collate
         if not hasattr(self, '_name'): self._name = self.__class__.__name__
+
+        self._dataset = {'train': train, 'val': val, 'test': test}
+        self._dataset = {k: v for k, v in self._dataset.items() if v is not None}
+
+        if 'val' not in self._dataset.keys(): self._split_val(val_split)
 
         self.num_workers = kwargs.pop('num_workers', 0)
         self.collate_fn = kwargs.pop('collate_fn', pack_collate)
@@ -76,6 +116,21 @@ class Data:
         self['train'] = Subset(self['train'], train_ids)
 
     def __call__(self, batch_size=1, shuffle=False, replace=False, probabilities=None, sample_space=None, mode='train'):
+        r"""Returns a MagNet DataLoader that iterates over the dataset.
+
+        Args:
+            batch_size (int): How many samples per batch to load. Default: ``1``
+            shuffle (bool): Set to ``True`` to have the data reshuffled
+                at every epoch. Default: ``False``
+            replace (bool): If ``True`` every datapoint can be resampled per
+                epoch. Default: ``False``
+            probabilities (list or numpy.ndarray): An array of probabilities
+                of drawing each member of the dataset. Default: ``None``
+            sample_space (float or int or list): The fraction / length / indices
+                of the sample to draw from. Default: ``None``
+            mode (str): One of [``'train'``, ``'val'``, ``'test'``].
+                Default: ``'train'``
+        """
         from .dataloader import TransformedDataset, DataLoader
         from .sampler import OmniSampler
 
@@ -95,21 +150,8 @@ class Data:
                             collate_fn, pin_memory, drop_last, timeout, worker_init_fn)
 
     @staticmethod
-    def make(train, val=None, test=None, val_split=0.2, **kwargs):
-        return _from_dataset(train, val, test, val_split, **kwargs)
-
-    @staticmethod
     def get(name):
         try:
             return wiki[name.lower()]()
         except KeyError as err:
             raise KeyError('No such dataset.') from err
-
-def _from_dataset(train, val=None, test=None, val_split=0.2, **kwargs):
-    data = Data(**kwargs)
-    data._dataset = {'train': train, 'val': val, 'test': test}
-    data._dataset = {k: v for k, v in data._dataset.items() if v is not None}
-
-    if 'val' not in data._dataset.keys(): data._split_val(val_split)
-
-    return data
