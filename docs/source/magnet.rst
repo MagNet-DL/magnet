@@ -1,5 +1,6 @@
-Magnet
+magnet
 ===================================
 
 .. automodule:: magnet
+
 .. autofunction:: eval

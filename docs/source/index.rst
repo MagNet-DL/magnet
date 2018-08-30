@@ -3,36 +3,24 @@
    You can adapt this file completely to your liking, but it should at least
    contain the root `toctree` directive.
 
+:github_url: https://github.com/svaisakh/magnet
+
 Welcome to MagNet's documentation!
 ==================================
 
 .. toctree::
-   :maxdepth: 2
-   :caption: Contents:
+   :maxdepth: 4
+   :caption: Package Reference
    
    magnet
-   data
-   data.core
-   data.transforms
-   nodes
-   training
-   training.history
-   training.utils
-   training.callbacks
-   utils
-   utils.images
-   utils.plot
-   utils.varseq
-
+   magnet.data <data>
+   magnet.nodes <nodes>
+   magnet.training <training>
+   magnet.debug <debug>
+   magnet.utils <utils>
 
 Indices and tables
 ==================
 
 * :ref:`genindex`
 * :ref:`modindex`
-* :ref:`search`
-
-Introduction
-============
-
-MagNet makes it stupid simple to create Deep Learning projects

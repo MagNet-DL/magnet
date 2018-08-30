@@ -21,7 +21,12 @@ setup(
         'Programming Language :: Python :: 3.6',
     ],
     install_requires=[
-        'torch',
-        'torchvision'
+        'torch==0.4.1',
+        'torchvision==0.2.1',
+        'matplotlib==2.2.2',
+        'beautifultable==0.5.2',
+        'tqdm==4.23.4',
+        'scikit-image=0.14.0',
+        'scipy==1.1.0'
         ]
 )
