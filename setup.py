@@ -26,7 +26,7 @@ setup(
         'matplotlib==2.2.2',
         'beautifultable==0.5.2',
         'tqdm==4.23.4',
-        'scikit-image=0.14.0',
+        'scikit-image==0.14.0',
         'scipy==1.1.0'
         ]
 )

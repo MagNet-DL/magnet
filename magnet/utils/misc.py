@@ -1,8 +1,6 @@
-try:
-    get_ipython()
-    in_notebook = True
-except:
-    in_notebook = False
+try: get_ipython()
+except: in_notebook = False
+else: in_notebook = True
 
 def caller_locals(ancestor=False):
     """Print the local variables in the caller's frame."""
@@ -16,7 +14,11 @@ def caller_locals(ancestor=False):
             f_class = l.pop('__class__', None)
             caller = l.pop('self')
             while f_class is not None and isinstance(caller, f_class):
-                l = frame.f_locals
+                l.pop('args', None)
+                args = frame.f_locals.pop('args', None)
+                l.update(frame.f_locals)
+                if args is not None: l['args'] = args
+                
                 l.pop('self', None)
                 frame = frame.f_back
                 f_class = frame.f_locals.pop('__class__', None)
@@ -45,22 +47,22 @@ def get_output_shape(module, input_shape):
     with no_grad(): return tuple(module(randn(input_shape)).size())
 
 def to_node(x, input_shape=None):
-        from .nodes import Lambda
-        from .models import Sequential
-        from inspect import isfunction
+    from .nodes import Lambda
+    from .models import Sequential
+    from inspect import isfunction
 
-        if type(x) is dict:
-            name = list(x.keys())[0]
+    if type(x) is dict:
+        name = list(x.keys())[0]
 
-            node = to_node(x[name], input_shape)
-            node.name = name
-        elif type(x) in [list, tuple]: node = Sequential(*x, x=input_shape)
-        elif isfunction(x): node = Lambda(x)
-        else: node = x
+        node = to_node(x[name], input_shape)
+        node.name = name
+    elif type(x) in [list, tuple]: node = Sequential(*x, x=input_shape)
+    elif isfunction(x): node = Lambda(x)
+    else: node = x
 
-        if not hasattr(node, 'name'): node.name = node.__class__.__name__
+    if not hasattr(node, 'name'): node.name = node.__class__.__name__
 
-        return node
+    return node
 
 def get_function_name(fn):
     from inspect import getsource
@@ -73,8 +75,8 @@ def get_function_name(fn):
     if len(name) > 1: return name[1].split('(')[0].strip()
 
 def get_tqdm():
-    """
-    :return: Returns a flexible tqdm object according to the environment of execution.
+    r"""Returns a flexible tqdm object according to the
+    environment of execution.
     """
     import tqdm
 
