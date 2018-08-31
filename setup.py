@@ -27,6 +27,9 @@ setup(
         'beautifultable==0.5.2',
         'tqdm==4.23.4',
         'scikit-image==0.14.0',
-        'scipy==1.1.0'
+        'scipy==1.1.0',
+        'hypothesis==3.69.12',
+        'pytest==3.7.4',
+        'pytest-cov==2.5.1'
         ]
 )

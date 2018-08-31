@@ -4,10 +4,16 @@
 </div>
 
 [![GitHub](https://img.shields.io/github/license/mashape/apistatus.svg)](https://github.com/svaisakh/magnet/blob/master/LICENSE)
-[![GitHub (pre-)release](https://img.shields.io/github/release/qubyte/rubidium/all.svg)](https://github.com/svaisakh/magnet/releases)
+[![Build Status](https://travis-ci.org/svaisakh/magnet.svg?branch=test)](https://travis-ci.org/svaisakh/magnet)
 [![Documentation Status](https://readthedocs.org/projects/magnet-dl/badge/?version=latest)](https://magnet-dl.readthedocs.io/en/latest/?badge=latest)
+![Python Version](https://img.shields.io/badge/python-3.6-blue.svg)
+[![GitHub (pre-)release](https://img.shields.io/github/release/qubyte/rubidium/all.svg)](https://github.com/svaisakh/magnet/releases)
+
 [![Gitter](https://img.shields.io/gitter/room/nwjs/nw.js.svg)](https://gitter.im/MagNet-DL/Contributors?utm_source=share-link&utm_medium=link&utm_campaign=share-link)
 [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg?style=flat)](https://github.com/svaisakh/magnet/pulls)
+[![codecov](https://codecov.io/gh/svaisakh/magnet/branch/test/graph/badge.svg)](https://codecov.io/gh/svaisakh/magnet)
+[![Codacy Badge](https://api.codacy.com/project/badge/Grade/838ed2d66584486aabfa783794d780a5)](https://www.codacy.com/app/svaisakh/magnet?utm_source=github.com&amp;utm_medium=referral&amp;utm_content=svaisakh/magnet&amp;utm_campaign=Badge_Grade)
+[![Project Stats](https://www.openhub.net/p/magnet/widgets/project_thin_badge.gif)](https://www.openhub.net/p/magnet)
 
 <div align="center">
   <br>

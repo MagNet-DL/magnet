@@ -1,0 +1,17 @@
+language: python
+dist: xenial
+python:
+  - "3.6"
+
+install:
+  - python setup.py install
+  - pip install codecov
+
+before_script:
+  - export PYTHONPATH=$PYTHONPATH:$(pwd)
+
+script:
+  - pytest tests/ --cov=magnet
+
+after_success:
+  - codecov
