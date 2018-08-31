@@ -3,6 +3,7 @@
   <h2>Deep Learning Projects that Build Themselves</h2>
 </div>
 
+[![Codacy Badge](https://api.codacy.com/project/badge/Grade/89929486e6154b44b4457f0d61dc77a9)](https://app.codacy.com/app/svaisakh/magnet?utm_source=github.com&utm_medium=referral&utm_content=svaisakh/magnet&utm_campaign=Badge_Grade_Dashboard)
 [![GitHub](https://img.shields.io/github/license/mashape/apistatus.svg)](https://github.com/svaisakh/magnet/blob/master/LICENSE)
 [![GitHub (pre-)release](https://img.shields.io/github/release/qubyte/rubidium/all.svg)](https://github.com/svaisakh/magnet/releases)
 [![Documentation Status](https://readthedocs.org/projects/magnet-dl/badge/?version=latest)](https://magnet-dl.readthedocs.io/en/latest/?badge=latest)
