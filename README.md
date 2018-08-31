@@ -246,7 +246,7 @@ trainer.train(data(batch_size=64, shuffle=True), epochs=13.8e9, callbacks=callba
 
 # Be Unstuck
 
-We at MagNet know exactly how it can wrench you gut when you catch a Deep Learning bug.
+We at MagNet know exactly how it can wrench your gut when you catch a Deep Learning bug.
 
 Sometimes you leave the project out of frustration.
 
@@ -381,7 +381,7 @@ Same code here
 - **Simple.** MagNet's API is designed to make sense.
   You first get the data in a helpful container, define the model and the training.
   Train. Debug. Repeat.
-- **Extensible.** The API is designed to be extended and to match your needs.
+- **Extensible.** The framework can quickly be extended to match your needs.
   Since the codebase is PyTorch, MagNet can also mix with lower-level details.
 - **Ready.** The Trainer can accommodate any training logic, however complex.
   This means that you can do almost any _never-before-seen_ experiment with
@@ -428,7 +428,7 @@ Read the documentation at http://magnet-dl.readthedocs.io/
 ## Getting Started
 These Jupyter Notebooks should help you get up and running with MagNet:
 
-* [Training an AI to Recognize Handwritten Digits in a Second](Notebooks/MNIST-Quickstart.ipynb)
+* [Training an AI to Recognize Handwritten Digits in a Second](Tutorials/MNIST-Quickstart/MNIST-Quickstart.ipynb)
 
 ## How You Can Help
 
