@@ -64,16 +64,6 @@ def to_node(x, input_shape=None):
 
     return node
 
-def get_function_name(fn):
-    from inspect import getsource
-    src = getsource(fn)
-
-    name = src.split('=')
-    if len(name) > 1: return name[0].strip()
-
-    name = src.split('def ')
-    if len(name) > 1: return name[1].split('(')[0].strip()
-
 def get_tqdm():
     r"""Returns a flexible tqdm object according to the
     environment of execution.

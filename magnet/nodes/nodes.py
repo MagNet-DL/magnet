@@ -5,7 +5,7 @@ import magnet as mag
 from torch import nn
 from torch.nn import functional as F
 
-from magnet.utils.misc import caller_locals, get_function_name
+from magnet.utils.misc import caller_locals
 
 class Node(nn.Module):
     r"""Abstract base class that defines MagNet's Node implementation.
@@ -63,6 +63,10 @@ class Node(nn.Module):
         args.update(args.pop('kwargs', {}))
 
         self.name = args.pop('name', self.__class__.__name__)
+
+        if self.name is None or self.name == '':
+            raise ValueError(f"""One of the {self.__class__.__name__} Node's
+                             names is {self.name}""")
 
         self._args = args
 

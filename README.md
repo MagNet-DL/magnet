@@ -9,7 +9,7 @@
 ![Python Version](https://img.shields.io/badge/python-3.6-blue.svg)
 [![GitHub (pre-)release](https://img.shields.io/github/release/qubyte/rubidium/all.svg)](https://github.com/svaisakh/magnet/releases)
 
-[![Gitter](https://img.shields.io/gitter/room/nwjs/nw.js.svg)](https://gitter.im/MagNet-DL/Contributors?utm_source=share-link&utm_medium=link&utm_campaign=share-link)
+[![Join the chat at https://gitter.im/MagNet-DL/Lobby](https://badges.gitter.im/Join%20Chat.svg)](https://gitter.im/MagNet-DL/Lobby/?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
 [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg?style=flat)](https://github.com/svaisakh/magnet/pulls)
 [![codecov](https://codecov.io/gh/svaisakh/magnet/branch/test/graph/badge.svg)](https://codecov.io/gh/svaisakh/magnet)
 [![Codacy Badge](https://api.codacy.com/project/badge/Grade/838ed2d66584486aabfa783794d780a5)](https://www.codacy.com/app/svaisakh/magnet?utm_source=github.com&amp;utm_medium=referral&amp;utm_content=svaisakh/magnet&amp;utm_campaign=Badge_Grade)
@@ -88,7 +88,7 @@ mn.Conv() * (50, 30, 10)
 
 ```python
 # Built-in activation functions and batch normalization
-model = nn.Sequential(mn.Conv(32), mn.Conv(64, act='tanh'), mn.Conv(128, act='lrelu'),
+model = nn.Sequential(mn.Conv(32), mn.Conv(64, act='tanh', bn=True), mn.Conv(128, act='lrelu'),
                       mn.Conv(10, act=None))
 ```
 
@@ -115,7 +115,7 @@ Here's the DCGAN:
 ```python
 conv = lambda *args, **kwargs: mn.Conv(*args, k=5, p='same', act='lrelu', **kwargs)
 
-discriminator = nn.Sequential(conv(32), *conv(bn=True) * (64, 128, 256), mn.Linear(1, act='sigmoid'))
+discriminator = nn.Sequential(conv(32), *conv(bn=True) * (64, 128, 256), mn.Linear(act='sigmoid'))
 
 conv = lambda *args, p='same', bn=True, **kwargs: mn.Conv(*args, k=5, p=p, bn=bn, **kwargs)
 

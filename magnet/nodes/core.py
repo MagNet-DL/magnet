@@ -32,19 +32,12 @@ class Lambda(Node):
     """
 
     def __init__(self, fn, **kwargs):
-        from magnet.utils.misc import get_function_name
-
         super().__init__(fn, **kwargs)
 
         # If a name is not supplied, get the function name instead
         # of the class (Lambda) name.
         if self.name == self.__class__.__name__:
-            self.name = get_function_name(self._args['fn'])
-
-        # If the function is a lambda function, it does not have a name.
-        # Supply it back with the name 'Lambda'.
-        if self.name is None:
-            self.name = self.__class__.__name__
+            self.name = self._args['fn'].__name__
 
     def forward(self, *args, **kwargs):
         return self._args['fn'](*args, **kwargs)
@@ -178,7 +171,7 @@ class Conv(Node):
         super().build(x)
 
     def forward(self, x):
-        if hasattr(self, '_upsample'): x = F.upsample(x, scale_factor=self._upsample)
+        if hasattr(self, '_upsample'): x = F.interpolate(x, scale_factor=self._upsample)
 
         x = self._activation(self.layer(x))
 
@@ -229,7 +222,7 @@ class Linear(Node):
     r"""Applies a linear transformation to the incoming tensor
 
     Args:
-        o (int or tuple, Required): Output dimensions
+        o (int or tuple): Output dimensions. Default: :math:`1`
         b (bool): Whether to include a bias term. Default: ``True``
         flat (bool): Whether to flatten out the input to 2 dimensions.
             Default: ``True``
@@ -323,7 +316,7 @@ class Linear(Node):
         +------+---------+--------------------+----------------------------------------------------+
         Total Trainable Parameters: 24,590
     """
-    def __init__(self, o, b=True, flat=True, i=None, act='relu', bn=False, **kwargs):
+    def __init__(self, o=1, b=True, flat=True, i=None, act='relu', bn=False, **kwargs):
         super().__init__(o, b, flat, i, act, bn, **kwargs)
 
     def build(self, x):
