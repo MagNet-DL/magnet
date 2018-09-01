@@ -3,7 +3,6 @@ import torch
 import magnet as mag
 
 from torch import nn
-from torch.nn import functional as F
 
 from magnet.utils.misc import caller_locals
 
@@ -117,8 +116,8 @@ class Node(nn.Module):
         raise NotImplementedError
 
     def __mul__(self, n):
-        if type(n) is int or (type(n) is float and n.is_integer()):
+        if isinstance(n, int) or (isinstance(n, float) and n.is_integer()):
             return self._mul_int(n)
 
-        if type(n) is tuple or type(n) is list:
+        if isinstance(n, (tuple, list)):
             return self._mul_list(n)

@@ -1,5 +1,5 @@
 try: get_ipython()
-except: in_notebook = False
+except NameError: in_notebook = False
 else: in_notebook = True
 
 def caller_locals(ancestor=False):

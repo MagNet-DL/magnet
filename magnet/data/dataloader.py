@@ -65,12 +65,8 @@ class DataLoader(DataLoaderPyTorch):
                   for k in ('shuffle', 'replace', 'sample_space')}
         static['batch_size'] = self.batch_size
 
-        state_dict = {'indices': sampler.indices,
-                      'pos': sampler.pos, 'static': static}
-
-        print(state_dict)
-
-        return state_dict
+        return {'indices': sampler.indices, 'pos': sampler.pos,
+                'static': static}
 
     def save_state_dict(self, path):
         import pickle
@@ -113,7 +109,7 @@ def pack_collate(batch, pack_dims=None):
 
         return default_collate(batch).to(mag.device)
 
-    if pack_dims == 'all': pack_dims = list(range(len(batch[0])))
+    if pack_dims == 'all': pack_dims = list(range(len_tensor(batch[0])))
     elif pack_dims is None: pack_dims = []
 
     if isinstance(batch[0], collections.Mapping):

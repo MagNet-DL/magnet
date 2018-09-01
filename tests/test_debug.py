@@ -1,7 +1,6 @@
 import pytest
 import matplotlib
 matplotlib.use('agg')
-import torch
 
 from torch import nn
 
@@ -10,7 +9,7 @@ import magnet.nodes as mn
 import magnet.debug as mdb
 
 from magnet.data.core import MNIST
-from magnet.training import SupervisedTrainer, callbacks
+from magnet.training import SupervisedTrainer
 
 def test_overfit():
     data, model, trainer = get_obj()
@@ -18,11 +17,11 @@ def test_overfit():
 
 class TestFlow:
     def test_ok(self):
-        data, model, trainer = get_obj()
+        data, _, trainer = get_obj()
         mdb.check_flow(trainer, data)
 
     def test_broken(self):
-        data, model, trainer = get_obj(broken=True)
+        data, _, trainer = get_obj(broken=True)
         with pytest.raises(RuntimeError):
             mdb.check_flow(trainer, data)
 

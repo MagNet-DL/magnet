@@ -252,7 +252,8 @@ class Checkpoint:
         self.path = path
         self.interval = self.parse_duration(interval)
 
-    def parse_duration(self, interval):
+    @staticmethod
+    def parse_duration(interval):
         interval, multiplier = interval.split(' ')
         interval = float(interval); multiplier = multiplier.lower()
         multiplier_dict = {'m': 60, 's': 1, 'h': 3600, 'ms': 1e-3, 'us': 1e-6, 'd': 24 * 3600}

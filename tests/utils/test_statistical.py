@@ -1,8 +1,11 @@
 import numpy as np
 import pytest
+import matplotlib
+matplotlib.use('agg')
+
 from hypothesis import given
 
-from magnet.utils.statistical import find_outliers, smoothen, _spline_interpolate
+from magnet.utils.statistical import find_outliers, smoothen
 from hypothesis.extra import numpy as nph
 from hypothesis import strategies as st
 

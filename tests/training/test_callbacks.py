@@ -1,5 +1,7 @@
 import torch
 import pytest
+import matplotlib
+matplotlib.use('agg')
 
 from torch.optim.lr_scheduler import ExponentialLR
 from pathlib import Path
@@ -53,7 +55,7 @@ class TestColdStart:
 
 class TestLRScheduler:
     def test_lr_decay(self):
-        data, model, trainer = get_obj()
+        data, _, trainer = get_obj()
 
         scheduler = ExponentialLR(trainer.optimizers[0], gamma=0.1)
 

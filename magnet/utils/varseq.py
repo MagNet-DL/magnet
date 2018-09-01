@@ -1,4 +1,4 @@
-import torch, numpy as np, magnet as mag
+import torch, numpy as np
 
 from torch.nn.utils.rnn import pack_sequence, pad_packed_sequence, pack_padded_sequence
 

@@ -1,7 +1,3 @@
-import numpy as np
-
-import magnet as mag
-
 def _get_data_dir():
     import os, warnings
     from pathlib import Path

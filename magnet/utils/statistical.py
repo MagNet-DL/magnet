@@ -9,7 +9,7 @@ def find_outliers(data, threshold=3.5, window_fraction=0.15):
     /eda35h.htm """
 
     def _handle_args():
-        if type(data) is not np.ndarray and type(data) is not list:
+        if not isinstance(data, np.ndarray) and not isinstance(data, list):
             raise TypeError('data needs to be a list or numpy array. Got {}'.format(type(data)))
         if len(data) == 0:
             raise ValueError('data is empty!')
@@ -69,7 +69,7 @@ def smoothen(data, window_fraction=0.3, **kwargs):
 
     def _handle_args():
         nonlocal data
-        if type(data) is not np.ndarray and type(data) is not list:
+        if not isinstance(data, np.ndarray) and not isinstance(data, list):
             raise TypeError('data needs to be a list or numpy array. Got {}'.format(type(data)))
         if len(data) == 0:
             raise ValueError('data is empty!')
@@ -78,14 +78,14 @@ def smoothen(data, window_fraction=0.3, **kwargs):
         if len(data.shape) > 1:
             raise ValueError('data needs to be 1-dimensional for now')
 
-        if type(window_fraction) is not float:
+        if not isinstance(window_fraction, float):
             raise TypeError('window_fraction should be a fraction (duh!). But got {}'.format(type(window_fraction)))
         if window_fraction < 0 or window_fraction > 1:
             raise ValueError('window_fraction should be a fraction (duh!). But got {}'.format(window_fraction))
         if np.isinf(window_fraction) or np.isnan(window_fraction):
             raise ValueError('window_fraction should be a finite number but got {}'.format(window_fraction))
 
-        if type(order) is not int:
+        if not isinstance(order, int):
             raise TypeError('order needs to be a non-negative integer but got {}'.format(type(order)))
         if order < 0:
             raise ValueError('order needs to be a non-negative integer but got {}'.format(order))
@@ -101,9 +101,7 @@ def smoothen(data, window_fraction=0.3, **kwargs):
                 new_data[outliers] = interpolate_fn(np.where(~outliers)[0], data[~outliers], np.where(outliers)[0])
                 data = new_data
 
-    arg_err = _handle_args()
-    if arg_err is not None:
-        return arg_err
+    _handle_args()
 
     window_length = int(len(data) * window_fraction)
     # savgol_filter needs an odd window_length
@@ -132,9 +130,7 @@ def _spline_interpolate(x, y, x_new, **kwargs):
         x = x[order_idx]
         y = y[order_idx]
 
-    err_arg = _handle_args()
-    if err_arg is not None:
-        return err_arg
+    _handle_args()
 
     t, c, k = interpolate.splrep(x, y, s=s, k=k)
     spline = interpolate.BSpline(t, c, k, extrapolate=extrapolate)

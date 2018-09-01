@@ -3,7 +3,6 @@ import hypothesis.strategies as st
 
 from hypothesis import given
 
-import magnet as mag
 from magnet.nodes import Node
 
 class TestNode:
@@ -43,4 +42,4 @@ class TestNode:
 
     def test_cannot_mul_list(self):
         with pytest.raises(NotImplementedError):
-            Node() * (4, 2)
+            node = Node() * (4, 2)

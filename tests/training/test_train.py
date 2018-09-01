@@ -22,7 +22,7 @@ class TestTrainer:
 
 class TestSupervisedTrainer:
     def test_iterations(self):
-        data, model, trainer = get_obj()
+        data, _, trainer = get_obj()
         trainer.train(data(), iterations=100)
 
         assert trainer.iterations == 99
@@ -56,7 +56,7 @@ class TestSupervisedTrainer:
         assert losses[0] > losses[1]
 
         val_losses = trainer.callbacks[1].history['val_loss']
-        assert losses[0] > losses[1]
+        assert val_losses[0] > val_losses[1]
 
     def test_not_training_when_eval(self):
         data, model, trainer = get_obj()

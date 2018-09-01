@@ -179,7 +179,8 @@ class Conv(Node):
 
         return x
 
-    def _find_layer(self, x):
+    @staticmethod
+    def _find_layer(x):
         shape_dict = [nn.Conv1d, nn.Conv2d, nn.Conv3d]
         ndim = len(x.shape) - 2
         return shape_dict[ndim - 1]
