@@ -197,9 +197,7 @@ def _resize_images(images, shape='smean', interp=1, mode='constant'):
         elif any(not isinstance(s, int) or s <= 0 for s in shape):
             raise ValueError('shape must have positive integer elements')
 
-    err_arg = _handle_args()
-    if err_arg is not None:
-        return err_arg
+    _handle_args()
 
     shape = list(shape) + [3]
     return [imresize(image, shape, interp, mode, anti_aliasing=False) for image in images]

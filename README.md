@@ -7,7 +7,7 @@
 [![Build Status](https://travis-ci.org/svaisakh/magnet.svg?branch=test)](https://travis-ci.org/svaisakh/magnet)
 [![Documentation Status](https://readthedocs.org/projects/magnet-dl/badge/?version=latest)](https://magnet-dl.readthedocs.io/en/latest/?badge=latest)
 ![Python Version](https://img.shields.io/badge/python-3.6-blue.svg)
-[![GitHub (pre-)release](https://img.shields.io/github/release/qubyte/rubidium/all.svg)](https://github.com/svaisakh/magnet/releases)
+[![GitHub Release](https://img.shields.io/badge/release-v0.1.0-ff69b4.svg)](https://github.com/svaisakh/magnet/releases)
 
 [![Join the chat at https://gitter.im/MagNet-DL/Lobby](https://badges.gitter.im/Join%20Chat.svg)](https://gitter.im/MagNet-DL/Lobby/?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
 [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg?style=flat)](https://github.com/svaisakh/magnet/pulls)
@@ -445,6 +445,12 @@ Lots of Node building, Data loading, Trainer watching and Bug squashing to be do
 A world of magic awaits anyone who dare enter.
 
 Join us on Gitter. [![Join the chat at https://gitter.im/MagNet-DL/Lobby](https://badges.gitter.im/Join%20Chat.svg)](https://gitter.im/MagNet-DL/Lobby/?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
+
+
+
+**Statuatory Warning**: Side effects include improved vision, clearer skin and whiter teeth.
+
+
 
 <div align="center">
   Handcrafted with ❤ by Vaisakh
