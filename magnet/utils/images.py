@@ -77,6 +77,7 @@ def show_images(images, **kwargs):
         elif type(images) is str:
             from glob import glob
             images = [plt.imread(f) for f in glob(images, recursive=True)]
+            if len(images) == 0: raise RuntimeError('No images found in this path!')
         elif type(images) is np.ndarray:
             images = list(images)
         elif type(images) in (list, tuple):
@@ -117,6 +118,9 @@ def show_images(images, **kwargs):
                 raise TypeError('savepath needs to be a string')
             os.makedirs(os.path.split(savepath)[0], exist_ok=True)
 
+        if type(retain) is not bool:
+            raise TypeError('retain must be either True or False')
+
         shape = _resolve_merge_shape(len(images), shape)
 
     err_arg = _handle_args()
@@ -133,7 +137,8 @@ def show_images(images, **kwargs):
     if not merge:
         fig, axes = plt.subplots(shape[0], shape[1])
         for i, ax in enumerate(axes.flat):
-            _show_image(images[i], title=titles[i], cmap=cmap, ax=ax, retain=True)
+            title = None if titles is None else titles[i]
+            _show_image(images[i], title=title, cmap=cmap, ax=ax, retain=True)
         fig.tight_layout()
     else:
         _show_image(_merge_images(images, shape), title=titles, cmap=cmap, retain=True)
@@ -146,15 +151,6 @@ def show_images(images, **kwargs):
 
 
 def _colorize_images(images):
-    def _handle_args():
-        if type(images) is np.ndarray:
-            if len(images.shape) > 2:
-                return _colorize_images(list(images))
-
-    err_arg = _handle_args()
-    if err_arg is not None:
-        return err_arg
-
     color_images = []
     for i, image in enumerate(images):
         if len(image.shape) == 2:
@@ -193,8 +189,6 @@ def _resize_images(images, shape='smean', interp=1, mode='constant'):
 
     def _handle_args():
         nonlocal shape
-        if any(len(image.shape) != 3 for image in images):
-            raise ValueError('All images must have 3 dimensions.')
         if type(shape) not in (tuple, list):
             if type(shape) is not str:
                 raise TypeError('shape must be either a tuple, list or string.')
@@ -221,22 +215,12 @@ def _show_image(image, **kwargs):
 
     def _handle_args():
         nonlocal image, ax
-        if type(image) is not np.ndarray:
-            raise TypeError('image needs to be a numpy array. Found {}'.format(type(image)))
-        if len(image.shape) not in (2, 3):
-            raise ValueError('invalid image dimensions. Needs to be 2 or 3-D. Found {}'.format(len(image.shape)))
-        elif len(image.shape) == 3 and np.all(image[:, :, 0] == image[:, :, 1]) and\
+        if len(image.shape) == 3 and np.all(image[:, :, 0] == image[:, :, 1]) and\
                 np.all(image[:, :, 1] == image[:, :, 2]):
             image = image[:, :, 0]
 
-        if title is not None and type(title) is not str:
-            raise TypeError('title needs to be None or a valid string. Found {}'.format(title))
-
         if ax is None:
             ax = plt.subplots()[1]
-
-        if type(retain) is not bool:
-            raise TypeError('retain must be either True or False')
 
     err_arg = _handle_args()
     if err_arg is not None:
@@ -257,22 +241,10 @@ def _merge_images(images, shape='square'):
     def _handle_args():
         nonlocal shape
 
-        if type(images) not in (list, tuple):
-            if type(images) is np.ndarray:
-                if len(images.shape) != 4:
-                    raise ValueError('images needs to be a 4-D array. Got {} dimensions'.format(len(images.shape)))
-
-                return _merge_images(list(images), shape)
-            else:
-                raise TypeError('images needs to be a list, tuple or numpy array. Got {}'.format(type(images)))
-
         shape = _resolve_merge_shape(len(images), shape)
 
         if len(images) != np.prod(shape):
             raise ValueError('Shape mismatch. Got shape {} but images are {} long'.format(shape, len(images)))
-
-        if any(np.std([image.shape for image in images], 0) != 0):
-            raise ValueError('All images need to be of the same shape')
 
     err_arg = _handle_args()
     if err_arg is not None:

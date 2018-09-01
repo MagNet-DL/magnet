@@ -150,6 +150,9 @@ class Trainer:
         try: self.callbacks('load_state', trainer=self, path=path / 'callbacks')
         except AttributeError: pass
 
+        try: self.dataloader.load_state_dict(path / 'dataloader.p')
+        except AttributeError: pass
+
     def save_state(self, path):
         from magnet.training.utils import save_state, save_object
 
@@ -160,6 +163,9 @@ class Trainer:
         save_object(state_dict, path / 'state.p')
 
         try: self.callbacks('save_state', trainer=self, path=path / 'callbacks')
+        except AttributeError: pass
+
+        try: self.dataloader.save_state_dict(path / 'dataloader.p')
         except AttributeError: pass
 
     def register_parameter(self, name, value):

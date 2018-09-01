@@ -3,6 +3,7 @@ import pytest
 
 from torch import optim
 from pathlib import Path
+from shutil import rmtree
 
 import magnet as mag
 import magnet.nodes as mn
@@ -75,8 +76,18 @@ class TestSupervisedTrainer:
 
         assert torch.all(model.layer.weight.data.detach() == weight_before)
 
+    def test_change_batch_size(self):
+        data, model, trainer = get_obj()
+        save_path = Path.cwd() / '.mock_trainer'
+        trainer.train(data(), iterations=10,
+                      callbacks=[callbacks.Checkpoint(save_path)])
+
+        trainer.train(data(batch_size=16), iterations=10,
+                      callbacks=[callbacks.Checkpoint(save_path)])
+
+        rmtree(save_path)
+
 def test_finish_training():
-    from shutil import rmtree
     data, model, trainer = get_obj()
 
     save_path = Path.cwd() / '.mock_trainer' / 'trainer'

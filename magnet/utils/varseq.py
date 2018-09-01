@@ -37,7 +37,7 @@ def pack(sequences, lengths=None):
         sequences = pack_sequence(sequences)
         sequences.order = order
     else:
-        order = np.argsort(lengths)[::-1]
+        order = np.argsort(lengths)[::-1].copy()
         sequences = sequences[:, order]
         lengths = lengths[order]
         sequences = pack_padded_sequence(sequences, torch.tensor(lengths))
