@@ -127,7 +127,7 @@ class History(dict):
                 plt.show()
             return
 
-        if ax is None: fig, ax = plt.subplots()
+        if ax is None: _, ax = plt.subplots()
         label = 'training' if legend is None else legend
         self[key].show(ax, x_key, label=label, **kwargs)
 

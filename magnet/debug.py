@@ -199,6 +199,7 @@ class _SetTrace(object):
         self.func = func
 
     def __enter__(self):
+        print(sys.gettrace())
         sys.settrace(self.func)
         return self
 
@@ -207,6 +208,8 @@ class _SetTrace(object):
 
 class _Monitor:
     def __init__(self, names=True):
+        if isinstance(names, str): names = (names, )
+
         self.names = names
 
     def init(self, frameinfo):

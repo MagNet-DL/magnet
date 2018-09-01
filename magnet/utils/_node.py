@@ -38,7 +38,7 @@ def summarize(module, x, parameters='trainable', arguments=False, batch=False, m
             n = num_params(module) if module is not None else (0, 0)
             n_dict = {'trainable': n[0], 'non-trainable': n[1], 'all': sum(n), True: n}
             n = n_dict[parameters]
-            return ', '.join(['{:,}'] * len(n)).format(*n) if type(n) is tuple else '{:,}'.format(n)
+            return ', '.join(['{:,}'] * len(n)).format(*n) if isinstance(n, tuple) else '{:,}'.format(n)
 
         if mode == 'row': return _get_num_params(node)
 

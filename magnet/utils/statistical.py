@@ -9,24 +9,18 @@ def find_outliers(data, threshold=3.5, window_fraction=0.15):
     /eda35h.htm """
 
     def _handle_args():
-        if type(data) is not np.ndarray and type(data) is not list:
+        if not isinstance(data, np.ndarray) and not isinstance(data, list):
             raise TypeError('data needs to be a list or numpy array. Got {}'.format(type(data)))
         if len(data) == 0:
             raise ValueError('data is empty!')
-        if np.any(np.isnan(data)) or np.any(np.isinf(data)):
-            raise ValueError('some of the data is either nan or inf')
         if len(data.shape) == 1:
             return find_outliers(np.expand_dims(data, -1), threshold, window_fraction)
 
-        if type(window_fraction) is not float:
-            raise TypeError('window_fraction should be a fraction (duh!). But got {}'.format(type(window_fraction)))
         if window_fraction < 0 or window_fraction > 1:
             raise ValueError('window_fraction should be a fraction (duh!). But got {}'.format(window_fraction))
         if np.isinf(window_fraction) or np.isnan(window_fraction):
             raise ValueError('window_fraction should be a finite number but got {}'.format(window_fraction))
 
-        if type(window_fraction) is not float:
-            raise TypeError('threshold should be a float. But got {}'.format(type(threshold)))
         if threshold < 0:
             raise ValueError(
                 'threshold should be non negative but got {}'.format(
@@ -75,7 +69,7 @@ def smoothen(data, window_fraction=0.3, **kwargs):
 
     def _handle_args():
         nonlocal data
-        if type(data) is not np.ndarray and type(data) is not list:
+        if not isinstance(data, np.ndarray) and not isinstance(data, list):
             raise TypeError('data needs to be a list or numpy array. Got {}'.format(type(data)))
         if len(data) == 0:
             raise ValueError('data is empty!')
@@ -84,14 +78,14 @@ def smoothen(data, window_fraction=0.3, **kwargs):
         if len(data.shape) > 1:
             raise ValueError('data needs to be 1-dimensional for now')
 
-        if type(window_fraction) is not float:
+        if not isinstance(window_fraction, float):
             raise TypeError('window_fraction should be a fraction (duh!). But got {}'.format(type(window_fraction)))
         if window_fraction < 0 or window_fraction > 1:
             raise ValueError('window_fraction should be a fraction (duh!). But got {}'.format(window_fraction))
         if np.isinf(window_fraction) or np.isnan(window_fraction):
             raise ValueError('window_fraction should be a finite number but got {}'.format(window_fraction))
 
-        if type(order) is not int:
+        if not isinstance(order, int):
             raise TypeError('order needs to be a non-negative integer but got {}'.format(type(order)))
         if order < 0:
             raise ValueError('order needs to be a non-negative integer but got {}'.format(order))
@@ -107,9 +101,7 @@ def smoothen(data, window_fraction=0.3, **kwargs):
                 new_data[outliers] = interpolate_fn(np.where(~outliers)[0], data[~outliers], np.where(outliers)[0])
                 data = new_data
 
-    arg_err = _handle_args()
-    if arg_err is not None:
-        return arg_err
+    _handle_args()
 
     window_length = int(len(data) * window_fraction)
     # savgol_filter needs an odd window_length
@@ -132,36 +124,13 @@ def _spline_interpolate(x, y, x_new, **kwargs):
 
     def _handle_args():
         nonlocal x, y
-        if type(s) is not int:
-            raise ValueError('s needs to be an integer')
-        if type(k) is not int:
-            raise ValueError('k needs to be an integer')
-        if type(extrapolate) is not bool:
-            raise ValueError('extrapolate needs to be either True or False')
-
-        if type(x) is not np.ndarray and type(x) is not list:
-            raise TypeError('x needs to be a list or numpy array. Got {}'.format(type(x)))
-        if len(x) <= k:
-            raise ValueError('x needs to be at least k ({}) long'.format(k))
-        if np.any(np.isnan(x)) or np.any(np.isinf(x)):
-            raise ValueError('some of x is either nan or inf')
-
-        if type(y) is not np.ndarray and type(y) is not list:
-            raise TypeError('y needs to be a list or numpy array. Got {}'.format(type(y)))
-        if len(x) != len(y):
-            raise ValueError('Both x and y should be of the same length.'
-                             'Got {} and {} respectively'.format(len(x), len(y)))
-        if np.any(np.isnan(y)) or np.any(np.isinf(y)):
-            raise ValueError('some of y is either nan or inf')
 
         # Sort the data in ascending order
         order_idx = np.argsort(x)
         x = x[order_idx]
         y = y[order_idx]
 
-    err_arg = _handle_args()
-    if err_arg is not None:
-        return err_arg
+    _handle_args()
 
     t, c, k = interpolate.splrep(x, y, s=s, k=k)
     spline = interpolate.BSpline(t, c, k, extrapolate=extrapolate)

@@ -56,7 +56,7 @@ class Trainer:
         """
         raise NotImplementedError
 
-    def train(self, dataloader, epochs=1, callbacks=[], **kwargs):
+    def train(self, dataloader, epochs=1, callbacks=None, **kwargs):
         r"""Starts the training process.
 
         Args:
@@ -64,7 +64,7 @@ class Trainer:
                 over the training set
             epochs (float or int): The number of epochs to train for.
                 Default: ``1``
-            callbacks (list): Any callbacks to be attached. Default: ``[]``
+            callbacks (list): Any callbacks to be attached. Default: ``None``
 
         Keyword Args:
             iterations (int): The number of iterations to train for.
@@ -77,6 +77,8 @@ class Trainer:
         """
         from magnet.training.callbacks import CallbackQueue
         self.dataloader = dataloader
+
+        if callbacks is None: callbacks = []
         self.callbacks = CallbackQueue(callbacks)
 
         total_iterations = kwargs.get('iterations', int(epochs * len(dataloader)))
@@ -150,6 +152,9 @@ class Trainer:
         try: self.callbacks('load_state', trainer=self, path=path / 'callbacks')
         except AttributeError: pass
 
+        try: self.dataloader.load_state_dict(path / 'dataloader.p')
+        except AttributeError: pass
+
     def save_state(self, path):
         from magnet.training.utils import save_state, save_object
 
@@ -160,6 +165,9 @@ class Trainer:
         save_object(state_dict, path / 'state.p')
 
         try: self.callbacks('save_state', trainer=self, path=path / 'callbacks')
+        except AttributeError: pass
+
+        try: self.dataloader.save_state_dict(path / 'dataloader.p')
         except AttributeError: pass
 
     def register_parameter(self, name, value):
@@ -183,7 +191,7 @@ class SupervisedTrainer(Trainer):
         loss (str or ``callable``): A loss function that gives the objective
             to be minimized. Default: ``'cross_entropy'``
         metrics (list): Any other metrics that need to be monitored.
-            Default: ``[]``
+            Default: ``None``
 
     * :attr:`optimizer` can be an actual ``optim.Optimizer`` instance or the
       name of a popular optimzizer (eg. ``'adam'``).
@@ -221,13 +229,13 @@ class SupervisedTrainer(Trainer):
                        callbacks.Validate(data(64, mode='val'), SupervisedTrainer.validate)]
         >>> trainer.train(data(64, shuffle=True), 1, callbacks)
     """
-    def __init__(self, model, optimizer='adam', loss='cross_entropy', metrics=[]):
+    def __init__(self, model, optimizer='adam', loss='cross_entropy', metrics=None):
         from magnet.nodes.functional import wiki
-        from torch.nn import functional as F
 
         if isinstance(optimizer, str): optimizer = optimizer_wiki[optimizer.lower()](model.parameters())
         if isinstance(loss, str): loss = wiki['losses'][loss.lower()]
 
+        if metrics is None: metrics = []
         if not isinstance(metrics, (tuple, list)): metrics = [metrics]
         for i, metric in enumerate(metrics):
             if isinstance(metric, str): metrics[i] = (metric, wiki['metrics'][metric.lower()])
@@ -322,6 +330,8 @@ def finish_training(path, names=None):
         >>> # decoder.pt
     """
     if not path.exists(): return
+
+    import shutil
 
     if isinstance(names, str): names = [names]
     filenames = list((path / 'models').glob('*.pt'))

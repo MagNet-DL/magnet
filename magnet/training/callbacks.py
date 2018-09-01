@@ -252,7 +252,8 @@ class Checkpoint:
         self.path = path
         self.interval = self.parse_duration(interval)
 
-    def parse_duration(self, interval):
+    @staticmethod
+    def parse_duration(interval):
         interval, multiplier = interval.split(' ')
         interval = float(interval); multiplier = multiplier.lower()
         multiplier_dict = {'m': 60, 's': 1, 'h': 3600, 'ms': 1e-3, 'us': 1e-6, 'd': 24 * 3600}
@@ -369,6 +370,12 @@ class LRScheduler:
           If it is the start of an epoch, steps the scheduler.
         """
         if signal == 'on_batch_start' and trainer.epochs('start'): self.scheduler.step()
+
+        elif signal == 'load_state':
+            self.load_state(kwargs.pop('path'))
+
+        elif signal == 'save_state':
+            self.save_state(kwargs.pop('path'))
 
     def load_state(self, path):
         from magnet.training.utils import load_state

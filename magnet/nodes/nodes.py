@@ -3,9 +3,8 @@ import torch
 import magnet as mag
 
 from torch import nn
-from torch.nn import functional as F
 
-from magnet.utils.misc import caller_locals, get_function_name
+from magnet.utils.misc import caller_locals
 
 class Node(nn.Module):
     r"""Abstract base class that defines MagNet's Node implementation.
@@ -64,6 +63,10 @@ class Node(nn.Module):
 
         self.name = args.pop('name', self.__class__.__name__)
 
+        if self.name is None or self.name == '':
+            raise ValueError(f"""One of the {self.__class__.__name__} Node's
+                             names is {self.name}""")
+
         self._args = args
 
     def get_args(self):
@@ -113,8 +116,8 @@ class Node(nn.Module):
         raise NotImplementedError
 
     def __mul__(self, n):
-        if type(n) is int or (type(n) is float and n.is_integer()):
+        if isinstance(n, int) or (isinstance(n, float) and n.is_integer()):
             return self._mul_int(n)
 
-        if type(n) is tuple or type(n) is list:
+        if isinstance(n, (tuple, list)):
             return self._mul_list(n)

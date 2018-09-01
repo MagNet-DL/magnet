@@ -32,19 +32,12 @@ class Lambda(Node):
     """
 
     def __init__(self, fn, **kwargs):
-        from magnet.utils.misc import get_function_name
-
         super().__init__(fn, **kwargs)
 
         # If a name is not supplied, get the function name instead
         # of the class (Lambda) name.
         if self.name == self.__class__.__name__:
-            self.name = get_function_name(self._args['fn'])
-
-        # If the function is a lambda function, it does not have a name.
-        # Supply it back with the name 'Lambda'.
-        if self.name is None:
-            self.name = self.__class__.__name__
+            self.name = self._args['fn'].__name__
 
     def forward(self, *args, **kwargs):
         return self._args['fn'](*args, **kwargs)
@@ -178,7 +171,7 @@ class Conv(Node):
         super().build(x)
 
     def forward(self, x):
-        if hasattr(self, '_upsample'): x = F.upsample(x, scale_factor=self._upsample)
+        if hasattr(self, '_upsample'): x = F.interpolate(x, scale_factor=self._upsample)
 
         x = self._activation(self.layer(x))
 
@@ -186,7 +179,8 @@ class Conv(Node):
 
         return x
 
-    def _find_layer(self, x):
+    @staticmethod
+    def _find_layer(x):
         shape_dict = [nn.Conv1d, nn.Conv2d, nn.Conv3d]
         ndim = len(x.shape) - 2
         return shape_dict[ndim - 1]
@@ -206,8 +200,6 @@ class Conv(Node):
         else: return
 
         s = 1 / f
-        if not s.is_integer():
-            raise RuntimeError("Padding value won't hold for all vector sizes")
 
         self._args['d'] = 1
         self._args['s'] = int(s)
@@ -229,7 +221,7 @@ class Linear(Node):
     r"""Applies a linear transformation to the incoming tensor
 
     Args:
-        o (int or tuple, Required): Output dimensions
+        o (int or tuple): Output dimensions. Default: :math:`1`
         b (bool): Whether to include a bias term. Default: ``True``
         flat (bool): Whether to flatten out the input to 2 dimensions.
             Default: ``True``
@@ -323,7 +315,7 @@ class Linear(Node):
         +------+---------+--------------------+----------------------------------------------------+
         Total Trainable Parameters: 24,590
     """
-    def __init__(self, o, b=True, flat=True, i=None, act='relu', bn=False, **kwargs):
+    def __init__(self, o=1, b=True, flat=True, i=None, act='relu', bn=False, **kwargs):
         super().__init__(o, b, flat, i, act, bn, **kwargs)
 
     def build(self, x):
@@ -400,6 +392,7 @@ class _RNNBase(Node):
         kwargs = self._args.copy()
         for h in n[1:]:
             kwargs['h'] = h
+            print(self.__class__, kwargs)
             rnns.append(self.__class__(**kwargs))
 
         return rnns
@@ -459,7 +452,8 @@ class RNN(_RNNBase):
         >>> model = nn.Sequential(model, mn.Linear(1000, act=None))
     """
     def __init__(self, h, n=1, b=False, bi=False, act='tanh', d=0, batch_first=False, i=None, **kwargs):
-        super().__init__('rnn', h, n, b, bi, act, d, batch_first, i, **kwargs)
+        mode = kwargs.pop('mode', 'rnn')
+        super().__init__(mode, h, n, b, bi, act, d, batch_first, i, **kwargs)
 
 class LSTM(_RNNBase):
     r"""Applies a multi-layer LSTM with to an input tensor.
@@ -467,8 +461,9 @@ class LSTM(_RNNBase):
             See mn.RNN for more details
             """
     def __init__(self, h, n=1, b=False, bi=False, d=0, batch_first=False, i=None, **kwargs):
-        act = None
-        super().__init__('lstm', h, n, b, bi, act, d, batch_first, i, **kwargs)
+        act = kwargs.pop('act', None)
+        mode = kwargs.pop('mode', 'lstm')
+        super().__init__(mode, h, n, b, bi, act, d, batch_first, i, **kwargs)
 
 class GRU(_RNNBase):
     r"""Applies a multi-layer GRU with to an input tensor.
@@ -476,8 +471,9 @@ class GRU(_RNNBase):
     See mn.RNN for more details
     """
     def __init__(self, h, n=1, b=False, bi=False, d=0, batch_first=False, i=None, **kwargs):
-        act = None
-        super().__init__('gru', h, n, b, bi, act, d, batch_first, i, **kwargs)
+        act = kwargs.pop('act', None)
+        mode = kwargs.pop('mode', 'gru')
+        super().__init__(mode, h, n, b, bi, act, d, batch_first, i, **kwargs)
 
 class BatchNorm(Node):
     r"""Applies Batch Normalization to the input tensor
