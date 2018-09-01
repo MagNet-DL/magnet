@@ -1,5 +1,3 @@
-import magnet as mag
-
 from torch import optim
 from contextlib import contextmanager
 

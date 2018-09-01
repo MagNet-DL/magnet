@@ -575,7 +575,8 @@ class BatchNorm(Node):
     def forward(self, x):
         return self.layer(x)
 
-    def _find_layer(self, x):
+    @staticmethod
+    def _find_layer(x):
         shape_dict = [nn.BatchNorm1d, nn.BatchNorm1d, nn.BatchNorm2d, nn.BatchNorm3d]
         ndim = len(x.shape) - 1
         return shape_dict[ndim - 1]
