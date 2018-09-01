@@ -1,0 +1,1 @@
+from magnet.training.train import *

@@ -1,6 +1,8 @@
 
 # Created by https://www.gitignore.io/api/python,pycharm+all,jupyternotebook
 
+**/checkpoints/
+
 ### JupyterNotebook ###
 .ipynb_checkpoints
 */.ipynb_checkpoints/*
@@ -116,6 +118,7 @@ nosetests.xml
 coverage.xml
 *.cover
 .hypothesis/
+.pytest_cache/
 
 test_todo.py
 
