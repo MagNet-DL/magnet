@@ -11,7 +11,7 @@
 
 [![Join the chat at https://gitter.im/MagNet-DL/Lobby](https://badges.gitter.im/Join%20Chat.svg)](https://gitter.im/MagNet-DL/Lobby/?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
 [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg?style=flat)](https://github.com/svaisakh/magnet/pulls)
-[![codecov](https://codecov.io/gh/svaisakh/magnet/branch/test/graph/badge.svg)](https://codecov.io/gh/svaisakh/magnet)
+[![codecov](https://codecov.io/gh/svaisakh/magnet/branch/master/graph/badge.svg)](https://codecov.io/gh/svaisakh/magnet)
 [![Codacy Badge](https://api.codacy.com/project/badge/Grade/838ed2d66584486aabfa783794d780a5)](https://www.codacy.com/app/svaisakh/magnet?utm_source=github.com&amp;utm_medium=referral&amp;utm_content=svaisakh/magnet&amp;utm_campaign=Badge_Grade)
 [![Project Stats](https://www.openhub.net/p/magnet/widgets/project_thin_badge.gif)](https://www.openhub.net/p/magnet)
 

@@ -13,20 +13,14 @@ def find_outliers(data, threshold=3.5, window_fraction=0.15):
             raise TypeError('data needs to be a list or numpy array. Got {}'.format(type(data)))
         if len(data) == 0:
             raise ValueError('data is empty!')
-        if np.any(np.isnan(data)) or np.any(np.isinf(data)):
-            raise ValueError('some of the data is either nan or inf')
         if len(data.shape) == 1:
             return find_outliers(np.expand_dims(data, -1), threshold, window_fraction)
 
-        if type(window_fraction) is not float:
-            raise TypeError('window_fraction should be a fraction (duh!). But got {}'.format(type(window_fraction)))
         if window_fraction < 0 or window_fraction > 1:
             raise ValueError('window_fraction should be a fraction (duh!). But got {}'.format(window_fraction))
         if np.isinf(window_fraction) or np.isnan(window_fraction):
             raise ValueError('window_fraction should be a finite number but got {}'.format(window_fraction))
 
-        if type(window_fraction) is not float:
-            raise TypeError('threshold should be a float. But got {}'.format(type(threshold)))
         if threshold < 0:
             raise ValueError(
                 'threshold should be non negative but got {}'.format(
@@ -132,27 +126,6 @@ def _spline_interpolate(x, y, x_new, **kwargs):
 
     def _handle_args():
         nonlocal x, y
-        if type(s) is not int:
-            raise ValueError('s needs to be an integer')
-        if type(k) is not int:
-            raise ValueError('k needs to be an integer')
-        if type(extrapolate) is not bool:
-            raise ValueError('extrapolate needs to be either True or False')
-
-        if type(x) is not np.ndarray and type(x) is not list:
-            raise TypeError('x needs to be a list or numpy array. Got {}'.format(type(x)))
-        if len(x) <= k:
-            raise ValueError('x needs to be at least k ({}) long'.format(k))
-        if np.any(np.isnan(x)) or np.any(np.isinf(x)):
-            raise ValueError('some of x is either nan or inf')
-
-        if type(y) is not np.ndarray and type(y) is not list:
-            raise TypeError('y needs to be a list or numpy array. Got {}'.format(type(y)))
-        if len(x) != len(y):
-            raise ValueError('Both x and y should be of the same length.'
-                             'Got {} and {} respectively'.format(len(x), len(y)))
-        if np.any(np.isnan(y)) or np.any(np.isinf(y)):
-            raise ValueError('some of y is either nan or inf')
 
         # Sort the data in ascending order
         order_idx = np.argsort(x)

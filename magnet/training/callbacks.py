@@ -370,6 +370,12 @@ class LRScheduler:
         """
         if signal == 'on_batch_start' and trainer.epochs('start'): self.scheduler.step()
 
+        elif signal == 'load_state':
+            self.load_state(kwargs.pop('path'))
+
+        elif signal == 'save_state':
+            self.save_state(kwargs.pop('path'))
+
     def load_state(self, path):
         from magnet.training.utils import load_state
         load_state(self.scheduler, path / self.name, alternative_name='scheduler')

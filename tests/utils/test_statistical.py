@@ -2,7 +2,6 @@ import numpy as np
 import pytest
 from hypothesis import given
 
-# noinspection PyProtectedMember
 from magnet.utils.statistical import find_outliers, smoothen, _spline_interpolate
 from hypothesis.extra import numpy as nph
 from hypothesis import strategies as st
@@ -11,6 +10,9 @@ from hypothesis import strategies as st
 class TestRemoveOutlier:
     def test_data_can_be_1d(self):
         find_outliers(np.zeros(5))
+
+    def test_data_can_be_linear(self):
+        find_outliers(np.linspace(0, 5, 100))
 
     def test_cannot_send_none(self):
         with pytest.raises(Exception):
@@ -62,6 +64,10 @@ class TestSmoothen:
         with pytest.raises(ValueError):
             smoothen(np.array([]))
 
+    def test_cannot_send_2d(self):
+        with pytest.raises(ValueError):
+            smoothen(np.ones((4, 3)))
+
     @given(st.integers(1, 100))
     def test_cannot_send_illegal(self, length):
         data = np.ones(length)
@@ -82,6 +88,18 @@ class TestSmoothen:
         with pytest.raises(ValueError):
             smoothen(np.zeros(5), window_fraction=window_fraction)
 
+    def test_window_fraction_too_low_warning(self):
+        with pytest.warns(RuntimeWarning):
+            smoothen(np.zeros(5), window_fraction=0.01)
+
+    def test_order_cannot_be_negative(self):
+        with pytest.raises(ValueError):
+            smoothen(np.zeros(5), order=-1)
+
+    def test_interpolate_fn_cannot_be_none(self):
+        with pytest.raises(ValueError):
+            smoothen(np.zeros(5), interpolate_fn=None)
+
     @given(nph.arrays(nph.floating_dtypes(), nph.array_shapes(max_dims=1, max_side=100)), st.floats(0, 1), st.data())
     def test_returns_same_shape(self, data, window_fraction, order):
         if np.any(np.isnan(data)) or np.any(np.isinf(data)):
@@ -94,15 +112,3 @@ class TestSmoothen:
         order = order.draw(st.integers(0, window_length - 1))
 
         assert len(smoothen(data, window_fraction, order=order)) == len(data)
-
-
-class TestPSplineInterpolate:
-    @given(nph.arrays(nph.floating_dtypes(), nph.array_shapes(max_dims=1, min_side=4), unique=True),
-           st.data(),
-           nph.arrays(nph.floating_dtypes(), nph.array_shapes(max_dims=1)))
-    def test_return_same_shape(self, x, y, x_new):
-        y = y.draw(nph.arrays(nph.floating_dtypes(), x.shape))
-        if np.any(np.isinf(x)) or np.any(np.isnan(x)) or np.any(np.isinf(y)) or np.any(np.isnan(y)):
-            return
-
-        assert len(x_new) == len(_spline_interpolate(x, y, x_new))
