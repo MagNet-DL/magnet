@@ -26,19 +26,6 @@ class TestFlow:
         with pytest.raises(RuntimeError):
             mdb.check_flow(trainer, data)
 
-class TestShape:
-    def test_forward(self):
-        model = BrokenModel()
-        with mdb.shape(): model(torch.ones(4, 1, 28, 28))
-
-    def test_other_name(self):
-        model = BrokenModel()
-        with mdb.shape(): model.sample(torch.ones(4, 1, 28, 28))
-
-    def test_specific_var(self):
-        model = BrokenModel()
-        with mdb.shape(debug='x'): model(torch.ones(4, 1, 28, 28))
-
 class TestBabysitter:
     def test_accumulating(self):
         data, model, trainer = get_obj()

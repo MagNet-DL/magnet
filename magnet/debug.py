@@ -199,6 +199,7 @@ class _SetTrace(object):
         self.func = func
 
     def __enter__(self):
+        print(sys.gettrace())
         sys.settrace(self.func)
         return self
 
