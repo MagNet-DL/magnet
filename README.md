@@ -1,5 +1,5 @@
 <div align="center">
-  <img src="assets/logo.png" alt="MagNet Logo"/> <img src="assets/logo-text.png" alt="MagNet Logo Text"/>
+  <img src="docs/source/_static/img/logo-full.png" alt="MagNet Logo"/> <img src="assets/logo-text.png" alt="MagNet Logo Text"/>
   <h2>Deep Learning Projects that Build Themselves</h2>
 </div>
 
@@ -444,7 +444,7 @@ Lots of Node building, Data loading, Trainer watching and Bug squashing to be do
 
 A world of magic awaits anyone who dare enter.
 
-Join us on Gitter. [![Gitter](https://img.shields.io/gitter/room/nwjs/nw.js.svg)](https://gitter.im/MagNet-DL/Contributors?utm_source=share-link&utm_medium=link&utm_campaign=share-link)
+Join us on Gitter. [![Join the chat at https://gitter.im/MagNet-DL/Lobby](https://badges.gitter.im/Join%20Chat.svg)](https://gitter.im/MagNet-DL/Lobby/?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
 
 <div align="center">
   Handcrafted with ❤ by Vaisakh

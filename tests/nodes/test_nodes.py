@@ -36,3 +36,11 @@ class TestNode:
 
         assert nodes[0] is node
         assert all(nodes[i]._args == node._args for i in range(1, n))
+
+    def test_print_args(self):
+        node = Node(5, 2, a=1)
+        assert node.get_args() == 'args=(5, 2), a=1'
+
+    def test_cannot_mul_list(self):
+        with pytest.raises(NotImplementedError):
+            Node() * (4, 2)

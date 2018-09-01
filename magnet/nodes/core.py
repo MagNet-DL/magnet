@@ -199,8 +199,6 @@ class Conv(Node):
         else: return
 
         s = 1 / f
-        if not s.is_integer():
-            raise RuntimeError("Padding value won't hold for all vector sizes")
 
         self._args['d'] = 1
         self._args['s'] = int(s)
@@ -393,6 +391,7 @@ class _RNNBase(Node):
         kwargs = self._args.copy()
         for h in n[1:]:
             kwargs['h'] = h
+            print(self.__class__, kwargs)
             rnns.append(self.__class__(**kwargs))
 
         return rnns
@@ -452,7 +451,8 @@ class RNN(_RNNBase):
         >>> model = nn.Sequential(model, mn.Linear(1000, act=None))
     """
     def __init__(self, h, n=1, b=False, bi=False, act='tanh', d=0, batch_first=False, i=None, **kwargs):
-        super().__init__('rnn', h, n, b, bi, act, d, batch_first, i, **kwargs)
+        mode = kwargs.pop('mode', 'rnn')
+        super().__init__(mode, h, n, b, bi, act, d, batch_first, i, **kwargs)
 
 class LSTM(_RNNBase):
     r"""Applies a multi-layer LSTM with to an input tensor.
@@ -460,8 +460,9 @@ class LSTM(_RNNBase):
             See mn.RNN for more details
             """
     def __init__(self, h, n=1, b=False, bi=False, d=0, batch_first=False, i=None, **kwargs):
-        act = None
-        super().__init__('lstm', h, n, b, bi, act, d, batch_first, i, **kwargs)
+        act = kwargs.pop('act', None)
+        mode = kwargs.pop('mode', 'lstm')
+        super().__init__(mode, h, n, b, bi, act, d, batch_first, i, **kwargs)
 
 class GRU(_RNNBase):
     r"""Applies a multi-layer GRU with to an input tensor.
@@ -469,8 +470,9 @@ class GRU(_RNNBase):
     See mn.RNN for more details
     """
     def __init__(self, h, n=1, b=False, bi=False, d=0, batch_first=False, i=None, **kwargs):
-        act = None
-        super().__init__('gru', h, n, b, bi, act, d, batch_first, i, **kwargs)
+        act = kwargs.pop('act', None)
+        mode = kwargs.pop('mode', 'gru')
+        super().__init__(mode, h, n, b, bi, act, d, batch_first, i, **kwargs)
 
 class BatchNorm(Node):
     r"""Applies Batch Normalization to the input tensor

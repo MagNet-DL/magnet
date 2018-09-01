@@ -7,7 +7,7 @@ from hypothesis import given
 from hypothesis.extra import numpy as nph
 
 import magnet as mag
-from magnet.nodes.core import Lambda, Conv, Linear, RNN, BatchNorm
+from magnet.nodes.core import Lambda, Conv, Linear, RNN, LSTM, GRU, BatchNorm
 
 torch.no_grad()
 
@@ -32,6 +32,17 @@ class TestLambda:
         assert torch.all(node(x) == x ** 2)
 
 class TestConv:
+    def test_half_padding_args(self):
+        x = torch.ones(4, 1, 28, 28)
+
+        conv_half = Conv().eval()
+        conv_half(x)
+
+        conv = Conv(2, p=1, s=2).eval()
+        conv(x)
+
+        assert conv._args == conv_half._args
+
     def test_half_padding(self):
         conv = Conv().eval()
         assert conv(torch.ones(4, 1, 28, 28)).shape == (4, 2, 14, 14)
@@ -95,11 +106,32 @@ class TestLinear:
         assert all(lin._args['o'] == o for lin, o in zip(lins, os))
 
 class TestRNN:
+    base = RNN
+
     def test_shape(self):
-        node = RNN(300).eval()
+        node = self.base(300).eval()
         x, h = node(torch.ones(7, 4, 100))
         assert x.shape == (7, 4, 300)
-        assert h.shape == (1, 4, 300)
+
+        if not isinstance(h, tuple): h = (h, )
+        for h_i in h: assert h_i.shape == (1, 4, 300)
+
+    def test_mul_list(self):
+        rnn_layer = self.base(300).eval()
+        hs = (300, 500, 200)
+        rnns = rnn_layer * hs
+
+        assert rnns[0] is rnn_layer
+        assert all(rnn._args[k] == rnn_layer._args[k]
+                   for k in rnn_layer._args.keys() if k != 'h'
+                   for rnn in rnns)
+        assert all(rnn._args['h'] == h for rnn, h in zip(rnns, hs))
+
+class TestLSTM(TestRNN):
+    base = LSTM
+
+class TestGRU(TestRNN):
+    base = GRU
 
 class TestBatchNorm:
     def test_bn_1d(self):
