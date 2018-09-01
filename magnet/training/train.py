@@ -323,6 +323,8 @@ def finish_training(path, names=None):
     """
     if not path.exists(): return
 
+    import shutil
+
     if isinstance(names, str): names = [names]
     filenames = list((path / 'models').glob('*.pt'))
     if names is None: names = [filename.stem for filename in filenames]
