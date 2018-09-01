@@ -49,6 +49,7 @@ class DataLoader(DataLoaderPyTorch):
                 worker_init_fn=None, buffer_size='full'):
         super().__init__(dataset, batch_size, shuffle, sampler, batch_sampler, num_workers, collate_fn,
                         pin_memory, drop_last, timeout, worker_init_fn)
+        self.shuffle = shuffle
 
         if buffer_size == 'full': buffer_size = len(self)
         self.buffer_size = buffer_size
@@ -60,7 +61,16 @@ class DataLoader(DataLoaderPyTorch):
         sampler = self.sampler
         if sampler.shuffle and sampler.replace: return None
 
-        return {'indices': sampler.indices, 'pos': sampler.pos}
+        static = {k: getattr(self.sampler, k)
+                  for k in ('shuffle', 'replace', 'sample_space')}
+        static['batch_size'] = self.batch_size
+
+        state_dict = {'indices': sampler.indices,
+                      'pos': sampler.pos, 'static': static}
+
+        print(state_dict)
+
+        return state_dict
 
     def save_state_dict(self, path):
         import pickle
@@ -76,11 +86,14 @@ class DataLoader(DataLoaderPyTorch):
                 with open(path, 'rb') as f: state_dict = pickle.load(f)
             else: return
 
+        if not self.compatible_with(state_dict): return
+
         self.sampler.indices = state_dict['indices']
         self.sampler.pos = state_dict['pos']
 
-    def compatible_with(self, dataloader):
-        return self.batch_size == dataloader.batch_size and self.sampler.shuffle == dataloader.sampler.shuffle and self.sampler.replace == dataloader.sampler.replace and self.sampler.sample_space == dataloader.sampler.sample_space
+    def compatible_with(self, state_dict):
+        return all(getattr(self, k) == v
+                   for k, v in state_dict['static'].items())
 
     def __next__(self):
         return next(iter(self))
