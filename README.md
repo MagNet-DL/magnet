@@ -102,6 +102,10 @@ See the progress
 monitor_callback
 ```
 
+<div align="center">
+  <img src="assets/monitor-plot.png" alt="Monitor Plot" width="600"/>
+</div>
+
 For a more thorough introduction, check out:
 
 [Training an AI to Recognize Handwritten Digits in a Second](Tutorials/MNIST-Quickstart/MNIST-Quickstart.ipynb)
