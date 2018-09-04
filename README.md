@@ -80,7 +80,7 @@ Now, we'll get the dataset in a ``Data`` container.
 data = Data.get('mnist')
 ```
 
-Now, we'll create a ``Trainer``.
+Next, we'll create a ``Trainer``.
 MagNet's ``Trainer`` class abstracts away the training process and allows you to add features through ``callbacks``.
 
 You can _implement your own training logic_.
@@ -108,7 +108,7 @@ monitor_callback
 
 For a more thorough introduction, check out:
 
-[Training an AI to Recognize Handwritten Digits in a Second](Tutorials/MNIST-Quickstart/MNIST-Quickstart.ipynb)
+[Quickstart - Training an AI to Recognize Handwritten Digits](Tutorials/MNIST-Quickstart/MNIST-Quickstart.ipynb)
 
 # Installation
 
@@ -182,7 +182,7 @@ Create multiple copies of the node
 mn.Linear(10) * 4
 ```
 Create multiple copies with different hidden sizes
- 
+
 ```python
 mn.Linear() * (50, 30, 10)
 mn.Conv() * (50, 30, 10)
@@ -369,7 +369,6 @@ mdb.overfit(trainer, data, batch_size=64)
 
 <div align="center">
   <img src="docs/source/_static/img/overfit-fail.png" alt="Failed Overfitting" width="600"/>
-
   Failed Overfitting
 </div>
 
@@ -383,13 +382,12 @@ mdb.overfit(trainer, data, batch_size=64)
 ```
 <div align="center">
   <img src="docs/source/_static/img/overfit-pass.png" alt="Good Overfitting" width="600"/>
-
   Good Overfitting
 </div>
 
-#### Watch the model evlove
+#### Watch the model evolve
 
-Sometimes, it is helpul to understand exactly how the model evolves over time.
+Sometimes, it is helpful to understand exactly how the model evolves over time.
 
 When does the model learn to attend, to decode, to summarize, to track, to colorize?
 
@@ -432,11 +430,11 @@ Same code here
 
 <hr>
 
-## Contributers Wanted
+## Contributors Needed
 
 I'm actively looking for contributors who can help take this forward.
 
-Lots of Node building, Data :oading, Trainer Watching and Bug Squashing to be done.
+Lots of Node building, Data Loading, Trainer Watching and Bug Squashing to be done.
 
 Join us on Gitter. [![Join the chat at https://gitter.im/MagNet-DL/Lobby](https://badges.gitter.im/Join%20Chat.svg)](https://gitter.im/MagNet-DL/Lobby/?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
 
@@ -448,3 +446,4 @@ Join us on Gitter. [![Join the chat at https://gitter.im/MagNet-DL/Lobby](https:
  <br>
  <hr>
  <sub>Created my free logo at LogoMakr.com</sub>
+
