@@ -1,7 +1,10 @@
+# MagNet: Deep Learning Projects that Build Themselves
+
 <div align="center">
-  <img src="docs/source/_static/img/logo-full.png" alt="MagNet Logo"/> <img src="assets/logo-text.png" alt="MagNet Logo Text"/>
-  <h2>Deep Learning Projects that Build Themselves</h2>
+  <img src="docs/source/_static/img/logo-full.png" alt="MagNet Logo"/>
 </div>
+
+<br>
 
 [![GitHub](https://img.shields.io/github/license/mashape/apistatus.svg)](https://github.com/svaisakh/magnet/blob/master/LICENSE)
 [![Build Status](https://travis-ci.org/svaisakh/magnet.svg?branch=test)](https://travis-ci.org/svaisakh/magnet)
@@ -15,40 +18,125 @@
 [![Codacy Badge](https://api.codacy.com/project/badge/Grade/838ed2d66584486aabfa783794d780a5)](https://www.codacy.com/app/svaisakh/magnet?utm_source=github.com&amp;utm_medium=referral&amp;utm_content=svaisakh/magnet&amp;utm_campaign=Badge_Grade)
 [![Project Stats](https://www.openhub.net/p/magnet/widgets/project_thin_badge.gif)](https://www.openhub.net/p/magnet)
 
-<div align="center">
-  <br>
-  <img src="assets/mnist.gif" alt="MNIST QuickStart"/>
+MagNet is a high-level Deep Learning API, wrapped around PyTorch.
 
-  MNIST in 15 seconds.
-</div>
+It was developed with the aim of reducing boilerplate code and writing Deep Learning architectures with more grace.
 
+You should take a look at it if you need something that is:
+
+- **Intelligent.** MagNet's ``Node``s are _self-aware_. Intelligent.
+  They attach to each other like magnets (hence the name).
+  This enables you to build complex architectures easily.
+  
+- **Simple.** MagNet's API enables a simplistic workflow.
+  Get the data. Define the model. Train. Debug. Test. Deploy.
+  
+- **Extensible.** Written on top of the awesome PyTorch library,
+  MagNet can also mix with lower-level details.
+  
+- **Ready.** The ``Trainer`` can accommodate **any training logic**, however complex.
+  This means that you can do almost any experiment / research with
+  all the features that MagNet has to offer.
 
 <hr>
-Dear Friend,
-<br><br>
-Have you ever:
 
-* felt like Deep Learning was a chore?
+# Getting started: 30 seconds to MagNetize
+The core idea of MagNet is the ``Node``.
+Nodes are PyTorch modules that can change their properties dynamically based on the computational graph.
 
-* found yourself writing too much boilerplate code that didn't matter in the end?
+This way, they attach to each other... like magnets!
 
-* started building an architecture only to feel overwhelmed?
+Here, we define a simple 3-layer CNN.
+Note that you only need to specify the bare essentials.
+No need to specify the strides, paddings, input sizes, or even flatten the output before feeding it to the final layer.
 
-* built a model only to find that there's some mysterious fault?
+```python
+model = nn.Sequential(mn.Conv(32), *mn.Conv() * 2, mn.Linear(10, act=None))
 
-* have had to write ominous checkpointing, monitoring and validation code?
+summarize(model, x=torch.randn(1, 1, 28, 28))
 
-If only there was a better way of building Deep Learning projects...
+"""
++----------+------------+----------------------+
+|   Node   |   Shape    | Trainable Parameters |
++----------+------------+----------------------+
+|  input   | 1, 28, 28  |          0           |
++----------+------------+----------------------+
+|   Conv   | 32, 14, 14 |         320          |
++----------+------------+----------------------+
+|   Conv   |  64, 7, 7  |        18,496        |
++----------+------------+----------------------+
+|   Conv   | 128, 4, 4  |        73,856        |
++----------+------------+----------------------+
+|  Linear  |     10     |        20,490        |
++----------+------------+----------------------+
+Total Trainable Parameters: 113,162
+"""
+```
 
-sigh...
+Now, we'll get the dataset in a ``Data`` container.
+``Data`` is a class that abstracts away the different sets (training, validation, test) and provides easy access to loaders.
+
+```python
+data = Data.get('mnist')
+```
+
+Next, we'll create a ``Trainer``.
+MagNet's ``Trainer`` class abstracts away the training process and allows you to add features through ``callbacks``.
+
+You can _implement your own training logic_.
+Here, we'll just use the built-in ``SupervisedTrainer``.
+
+```python
+trainer = SupervisedTrainer(model)
+
+# Tracks the loss, metrics and adds a nice progress-bar
+monitor_callback = callbacks.Monitor()
+
+# Train the model for one epoch
+trainer.train(data(batch_size=64, shuffle=True), callbacks=[monitor_callback])
+```
+
+See the progress
+
+```python
+monitor_callback
+```
 
 <div align="center">
-	<b>Introducting MagNet</b>
-	<br>
-	The newest, coolest framework on the Deep Learning block.
+  <img src="assets/monitor-plot.png" alt="Monitor Plot" width="600"/>
 </div>
-<br><br>
-MagNet makes creating, training, debugging and deploying as simple as pie.
+
+For a more thorough introduction, check out:
+
+[Quickstart - Training an AI to Recognize Handwritten Digits](Tutorials/MNIST-Quickstart/MNIST-Quickstart.ipynb)
+
+# Installation
+
+Clone the MagNet repository by running
+
+``git clone https://github.com/svaisakh/magnet.git``
+
+Create the conda environment that has all the needed packages and dependencies.
+
+``
+cd magnet && conda env update
+``
+
+Add the directory to the ```$PYTHONPATH``` variable by adding the following line to your ```.bashrc```
+
+``export PYTHONPATH=$PYTHONPATH:~/magnet``
+
+Point to a directory to store datasets by default.
+
+``export MAGNET_DATAPATH="<PATH_TO_DIRECTORY>"``
+
+Update by running
+
+``source ~/.bashrc``
+
+Anytime you use MagNet, activate the conda environment
+
+``conda activate magnet``
 
 <hr>
 
@@ -58,10 +146,8 @@ Nodes are PyTorch modules that are _self-aware_!
 
 Nodes can react to what's going on and dynamically change based on the input.
 
-Now, you don't have to worry about specifying the dimensionality of the input,
+You don't have to worry about specifying the dimensionality of the input,
 reshaping or having to work out whether to use Conv1D, Conv2D or Conv3D.
-
-MagNet's Nodes do it all for you.
 
 Here's a simple Deep Neural Network with two hidden layers:
 
@@ -69,28 +155,7 @@ Here's a simple Deep Neural Network with two hidden layers:
 dnn = nn.Sequential(mn.Linear(50), mn.Linear(10, act=None))
 ```
 
-See, you don't need to specify anything except the essentials.
-
-## Making life simpler
-
-Nodes bring some witty features with them such as:
-
-```python
-# Create multiple copies of the node
-mn.Linear(10) * 4
-```
-
-```python
-# Create multiple copies with different hidden sizes
-mn.Linear() * (50, 30, 10)
-mn.Conv() * (50, 30, 10)
-```
-
-```python
-# Built-in activation functions and batch normalization
-model = nn.Sequential(mn.Conv(32), mn.Conv(64, act='tanh', bn=True), mn.Conv(128, act='lrelu'),
-                      mn.Conv(10, act=None))
-```
+You don't need to specify anything except the bare essentials.
 
 ```python
 # Intelligent reshaping between nodes
@@ -109,9 +174,31 @@ print(z.shape) # Output: torch.Size([1, 10])
 
 MagNet's Nodes are built just in time, according to the computational graph.
 
-## Create complex architectures easily
+## Witty Features
 
-Here's the DCGAN:
+Create multiple copies of the node
+
+```python
+mn.Linear(10) * 4
+```
+Create multiple copies with different hidden sizes
+
+```python
+mn.Linear() * (50, 30, 10)
+mn.Conv() * (50, 30, 10)
+```
+
+Built-in activation functions and batch normalization
+
+```python
+model = nn.Sequential(mn.Conv(32), mn.Conv(64, act='tanh', bn=True), mn.Conv(128, act='lrelu'),
+                      mn.Conv(10, act=None))
+```
+
+## Examples
+
+DCGAN:
+
 ```python
 conv = lambda *args, **kwargs: mn.Conv(*args, k=5, p='same', act='lrelu', **kwargs)
 
@@ -123,7 +210,8 @@ generator = nn.Sequential(mn.Linear((256, 7, 7)), *conv(p='double') * 2, conv(32
                           conv(1, bn=False, act='tanh'))
 ```
 
-Here's a 34-layer, state of the art ResNet:
+State of the art, 34-layer ResNet:
+
 ```python
 class ResBlock(mn.Node):
     def __init__(self, c=None, p='same'):
@@ -191,19 +279,13 @@ trainer.train(data(batch_size=16, shuffle=True),
               callbacks=[validate, monitor, checkpoint, i_am_kewl])
 ```
 
-Now, you'll never need to write those pesky, fragile training loops again.
-
-No more logging code. No more serialization code.
-
-Let MagNet handle it all for you.
+You don't need to write training loops, logging or serialization code.
 
 ## Bring your own logic
 
-That's not all.
-
 MagNet is a general purpose framework.
 
-Which means you can use any training logic and plug it right in to the trainer.
+Which means you can **use any training logic** and plug it right into the trainer.
 
 ```python
 class MyTrainer(Trainer):
@@ -250,22 +332,15 @@ trainer.train(data(batch_size=64, shuffle=True), epochs=13.8e9, callbacks=callba
 
 <hr>
 
-# Be Unstuck
+# Debugging Tools
 
-We at MagNet know exactly how it can wrench your gut when you catch a Deep Learning bug.
-
-Sometimes you leave the project out of frustration.
-
-Worse, it could take weeks of training before you realize that there's something not really right.
-
-Worry not! MagNet's debugging tools are here to help.
-
-#### Check if the model is broken
+#### Catch breaks in computational graph
 
 ```python
 # Suppose this is the loss function
 def reconstruction_loss(x_gen, y):
-	return torch.tensor([F.cross_entropy(input_, target) 													for input_, target in zip(x_gen, y)]).mean()
+  return torch.tensor([F.cross_entropy(input_, target)
+                       for input_, target in zip(x_gen, y)]).mean()
     
 # The check_flow() method can trace any breaks in gradient flow.
 mdb.check_flow(trainer, data)
@@ -274,29 +349,16 @@ mdb.check_flow(trainer, data)
 # Aha! The loss function had created a new Tensor
 # which did not have the gradient history
 def reconstruction_loss(x_gen, y):
-	return torch.stack([F.cross_entropy(input_, target)
-                        for input_, target in zip(x_gen, y)]).mean()
+  return torch.stack([F.cross_entropy(input_, target)
+                      for input_, target in zip(x_gen, y)]).mean()
 
 mdb.check_flow(trainer, data)
 # No breaks. No errors. Safe to move on.
 ```
 
-#### Follow the shapes
-
-Sometimes you have a hard time building the architecture itself.
-
-The shapes don't fit.
-
-```python
-# The shape() context manager traces all tensor
-# shapes after every line in the forward function
-with mdb.shape(debug=['x', 'out', 'h']):
-    model(x)
-```
-
 #### Overfit a small sample
 
-If you can't overfit on a small sample, you're screwed.
+If you can't overfit on a small sample, the model probably cannot model the complexity of the data.
 
 ```python
 model = mn.Linear(10)
@@ -307,7 +369,6 @@ mdb.overfit(trainer, data, batch_size=64)
 
 <div align="center">
   <img src="docs/source/_static/img/overfit-fail.png" alt="Failed Overfitting" width="600"/>
-
   Failed Overfitting
 </div>
 
@@ -321,19 +382,16 @@ mdb.overfit(trainer, data, batch_size=64)
 ```
 <div align="center">
   <img src="docs/source/_static/img/overfit-pass.png" alt="Good Overfitting" width="600"/>
-
   Good Overfitting
 </div>
 
-#### Babysit the Model
+#### Watch the model evolve
 
-Over time, you begin to wonder, how do these models learn?
+Sometimes, it is helpful to understand exactly how the model evolves over time.
 
-When does the model learn to attend, to decode, to summarize, to track, to colorize.
+When does the model learn to attend, to decode, to summarize, to track, to colorize?
 
-The ``Babysitter`` callback constantly monitors the ~~baby~~ model and logs the mean relative gradients for each parameter. This will tell you how the model is learning as training progresses.
-
-> Note to self: Rename callback to _Arkangel_
+The ``Babysitter`` callback constantly monitors the model and logs the mean relative gradients for each parameter. This will tell you how the model is learning as training progresses.
 
 ```python
 # Just add the callback into the mix
@@ -344,24 +402,16 @@ trainer.train(dataloader, epochs, callbacks=[*my_existing_callbacks, Babysitter(
 
 # Automatic Acceleration
 
-MagNet does not believe in making you suffer.
-
-You don't need to deal with the CPU if you have a GPU.
-
-Of course, you want the code to run on the _faster, better, shinier_ silicon.
-
-Who wouldn't?
-
 **MagNet's codebase is device-agnostic.**
 
 All data, models, tensors created by MagNet are automatically run on the faster hardware.
 
-Say goodbye to shuttling between ``.to(device)`` and ``.cpu()`` casts.
+No need to shuttle between ``.to(device)`` and ``.cpu()`` calls.
 
 ```python
 # When run on CPU
 import magnet as mag
-# Prints: Running your code on a boring CPU
+# Prints: Running your code on a CPU
 
 """
 Your code here
@@ -371,7 +421,7 @@ Your code here
 ```python
 # When run on GPU
 import magnet as mag
-# Prints: Accelerating your code on a shiney new NVIDIA 1080Ti.
+# Prints: Accelerating your code on an NVIDIA 1080Ti GPU.
 
 """
 Same code here
@@ -380,82 +430,20 @@ Same code here
 
 <hr>
 
-## Why you need to start using MagNet
+## Contributors Needed
 
-- **Intelligent.** MagNet's Nodes are alive and aware. Intelligent.
-  You don't build the graph, the graph builds itself.
-- **Simple.** MagNet's API is designed to make sense.
-  You first get the data in a helpful container, define the model and the training.
-  Train. Debug. Repeat.
-- **Extensible.** The framework can quickly be extended to match your needs.
-  Since the codebase is PyTorch, MagNet can also mix with lower-level details.
-- **Ready.** The Trainer can accommodate any training logic, however complex.
-  This means that you can do almost any _never-before-seen_ experiment with
-  all the features and comforts that MagNet has to offer.
+I'm actively looking for contributors who can help take this forward.
 
-# Getting Your Hands on a Copy
-
-
-Clone the MagNet repository by running
-
-``git clone https://github.com/svaisakh/magnet.git``
-
-Checkout the ``develop`` branch.
-
-```
-cd magnet
-git checkout develop
-```
-
-Create the conda environment that has all the needed packages and dependencies.
-
-```conda env update```
-
-Add the directory to the ```$PYTHONPATH``` variable by adding the following line to your ```.bashrc``` (Ubuntu) / ```.bash_profile``` (macOS)
-
-```export PYTHONPATH=$PYTHONPATH:~/magnet```
-
-Point to a directory to store datasets by default.
-
-``export MAGNET_DATAPATH="<PATH_TO_DIRECTORY>"``
-
-Update by running
-
-```source ~/.bashrc``` or ```source ~/.bash_profile``` as appropriate.
-
-Before you want to use MagNet, activate the conda environment
-
-``conda activate magnet``
-
-Read the documentation at http://magnet-dl.readthedocs.io/
-
-**Hurry! Clone Now**
-
-## Getting Started
-These Jupyter Notebooks should help you get up and running with MagNet:
-
-* [Training an AI to Recognize Handwritten Digits in a Second](Tutorials/MNIST-Quickstart/MNIST-Quickstart.ipynb)
-
-## How You Can Help
-
-I'm actively looking for contributors who can help propel this forward.
-
-Lots of Node building, Data loading, Trainer watching and Bug squashing to be done.
-
-A world of magic awaits anyone who dare enter.
+Lots of Node building, Data Loading, Trainer Watching and Bug Squashing to be done.
 
 Join us on Gitter. [![Join the chat at https://gitter.im/MagNet-DL/Lobby](https://badges.gitter.im/Join%20Chat.svg)](https://gitter.im/MagNet-DL/Lobby/?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
-
-
-
-**Statuatory Warning**: Side effects include improved vision, clearer skin and whiter teeth.
-
 
 
 <div align="center">
   Handcrafted with ❤ by Vaisakh
  </div>
 
- <br><br>
+ <br>
  <hr>
  <sub>Created my free logo at LogoMakr.com</sub>
+
