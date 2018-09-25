@@ -10,7 +10,7 @@ setup(
     author='Vaisakh',
     author_email='svaisakh1994@gmail.com',
     url='https://github.com/svaisakh/magnet',
-    packages=['magnet'],
+    packages=['magnet', 'arghandle'],
     license='MIT license',
     zip_safe=False,
     classifiers=[
