@@ -1,7 +1,4 @@
 import pytest
-import hypothesis.strategies as st
-
-from hypothesis import given
 
 from magnet.nodes import Node
 
@@ -10,26 +7,23 @@ class TestNode:
         node = Node()
         assert not node._built
 
-    @given(st.lists(st.integers(), max_size=5), st.booleans(),
-           st.dictionaries(st.text(max_size=5), st.integers(), max_size=5),
-           st.data())
-    def test_store_arguments(self, args, include_name, kwargs, name):
-        if include_name:
-            name = kwargs['name'] = name.draw(st.text(min_size=1, max_size=10))
+    def test_store_arguments(self):
+        args = [4, 2, 3]
+        name = 'some_node'
+        kwargs = {'r': 2, 'k': 4, 'tf': 34}
 
-        node = Node(*args, **kwargs)
-        kwargs.pop('name', None)
+        node = Node(*args, name=name,**kwargs)
 
         assert node._args == {'args': tuple(args), **kwargs}
-        if include_name: assert node.name == name
+        assert node.name == name
 
-    @given(st.one_of(st.none(), st.just('')))
-    def test_name_is_not_senseless(self, name):
+    def test_name_is_not_senseless(self):
         with pytest.raises(ValueError):
-            Node(name=name)
+            Node(name=None)
+            Node(name='')
 
-    @given(st.integers(1, 10))
-    def test_mul_int(self, n):
+    def test_mul_int(self):
+        n = 5
         node = Node(5, 2, a=1)
         nodes = node * n
 

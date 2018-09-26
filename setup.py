@@ -10,7 +10,7 @@ setup(
     author='Vaisakh',
     author_email='svaisakh1994@gmail.com',
     url='https://github.com/svaisakh/magnet',
-    packages=['magnet'],
+    packages=['magnet', 'arghandle'],
     license='MIT license',
     zip_safe=False,
     classifiers=[
@@ -28,7 +28,6 @@ setup(
         'tqdm==4.23.4',
         'scikit-image==0.14.0',
         'scipy==1.1.0',
-        'hypothesis==3.69.12',
         'pytest==3.7.4',
         'pytest-cov==2.5.1'
         ]

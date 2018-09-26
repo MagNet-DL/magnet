@@ -3,11 +3,7 @@ import pytest
 import matplotlib
 matplotlib.use('agg')
 
-from hypothesis import given
-
 from magnet.utils.statistical import find_outliers, smoothen
-from hypothesis.extra import numpy as nph
-from hypothesis import strategies as st
 
 
 class TestRemoveOutlier:
@@ -40,10 +36,8 @@ class TestRemoveOutlier:
         with pytest.raises(ValueError):
             find_outliers(np.zeros(5), np.inf)
 
-    @given(st.floats())
-    def test_window_fraction_is_fraction(self, window_fraction):
-        if 0 <= window_fraction <= 1:
-            return
+    def test_window_fraction_is_fraction(self):
+        window_fraction = 2
 
         with pytest.raises(ValueError):
             find_outliers(np.zeros(5), window_fraction=window_fraction)
@@ -71,22 +65,19 @@ class TestSmoothen:
         with pytest.raises(ValueError):
             smoothen(np.ones((4, 3)))
 
-    @given(st.integers(1, 100))
-    def test_cannot_send_illegal(self, length):
-        data = np.ones(length)
+    def test_cannot_send_illegal(self):
+        data = np.ones(100)
         with pytest.raises(ValueError):
             data[np.random.randint(0, len(data))] = np.nan
             smoothen(data)
 
-        data = np.ones(length)
+        data = np.ones(10)
         with pytest.raises(ValueError):
             data[np.random.randint(0, len(data))] = np.inf
             smoothen(data)
 
-    @given(st.floats())
-    def test_window_fraction_is_fraction(self, window_fraction):
-        if 0 <= window_fraction <= 1:
-            return
+    def test_window_fraction_is_fraction(self):
+        window_fraction = 2.0
 
         with pytest.raises(ValueError):
             smoothen(np.zeros(5), window_fraction=window_fraction)
@@ -103,15 +94,14 @@ class TestSmoothen:
         with pytest.raises(ValueError):
             smoothen(np.zeros(5), interpolate_fn=None)
 
-    @given(nph.arrays(nph.floating_dtypes(), nph.array_shapes(max_dims=1, max_side=100)), st.floats(0, 1), st.data())
-    def test_returns_same_shape(self, data, window_fraction, order):
-        if np.any(np.isnan(data)) or np.any(np.isinf(data)):
-            return
+    def test_returns_same_shape(self):
+        data = np.ones(3)
+        window_fraction = 0.3
 
         window_length = int(len(data) * window_fraction)
         if window_length % 2 == 0:
             window_length = max(1, window_length - 1)
 
-        order = order.draw(st.integers(0, window_length - 1))
+        order = 1
 
         assert len(smoothen(data, window_fraction, order=order)) == len(data)
