@@ -7,15 +7,15 @@
 <br>
 
 [![GitHub](https://img.shields.io/github/license/mashape/apistatus.svg)](https://github.com/svaisakh/magnet/blob/master/LICENSE)
-[![Build Status](https://travis-ci.org/svaisakh/magnet.svg?branch=test)](https://travis-ci.org/svaisakh/magnet)
+[![Build Status](https://travis-ci.org/MagNet-DL/magnet.svg?branch=master)](https://travis-ci.org/MagNet-DL/magnet)
 [![Documentation Status](https://readthedocs.org/projects/magnet-dl/badge/?version=latest)](https://magnet-dl.readthedocs.io/en/latest/?badge=latest)
 ![Python Version](https://img.shields.io/badge/python-3.6-blue.svg)
 [![GitHub Release](https://img.shields.io/badge/release-v0.1.0-ff69b4.svg)](https://github.com/svaisakh/magnet/releases)
 
 [![Join the chat at https://gitter.im/MagNet-DL/Lobby](https://badges.gitter.im/Join%20Chat.svg)](https://gitter.im/MagNet-DL/Lobby/?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
 [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg?style=flat)](https://github.com/svaisakh/magnet/pulls)
-[![codecov](https://codecov.io/gh/svaisakh/magnet/branch/master/graph/badge.svg)](https://codecov.io/gh/svaisakh/magnet)
-[![Codacy Badge](https://api.codacy.com/project/badge/Grade/838ed2d66584486aabfa783794d780a5)](https://www.codacy.com/app/svaisakh/magnet?utm_source=github.com&amp;utm_medium=referral&amp;utm_content=svaisakh/magnet&amp;utm_campaign=Badge_Grade)
+[![codecov](https://codecov.io/gh/MagNet-DL/magnet/branch/master/graph/badge.svg)](https://codecov.io/gh/MagNet-DL/magnet)
+[![Codacy Badge](https://api.codacy.com/project/badge/Grade/16de4d80b50f40988f6886008a78593b)](https://www.codacy.com/app/svaisakh/magnet?utm_source=github.com&amp;utm_medium=referral&amp;utm_content=MagNet-DL/magnet&amp;utm_campaign=Badge_Grade)
 [![Project Stats](https://www.openhub.net/p/magnet/widgets/project_thin_badge.gif)](https://www.openhub.net/p/magnet)
 
 MagNet is a high-level Deep Learning API, wrapped around PyTorch.

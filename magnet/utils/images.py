@@ -1,12 +1,8 @@
 import numpy as np
-import itertools
 import matplotlib.pyplot as plt
-import os
 
 from skimage.transform import resize as imresize
 from arghandle import arghandle
-
-from torch import is_tensor
 
 @arghandle
 def show_images(images, **kwargs):
