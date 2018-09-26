@@ -14,4 +14,4 @@ script:
   - pytest tests/ --cov=magnet
 
 after_success:
-  - codecov
+- codecov

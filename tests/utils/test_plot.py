@@ -1,19 +1,13 @@
-import hypothesis.strategies as st
 import numpy as np
-from hypothesis import given
-from hypothesis.extra import numpy as nph
 
 from magnet.utils.plot import smooth_plot
 
 
 class TestSmoothenPlot:
-    @given(nph.arrays(nph.floating_dtypes(), nph.array_shapes(max_dims=1, min_side=4), unique=True),
-           st.data(),
-           st.floats(1, 10))
-    def test_get_gained_points_back(self, x, y, gain):
-        y = y.draw(nph.arrays(nph.floating_dtypes(), x.shape))
-        if np.any(np.isinf(x)) or np.any(np.isnan(x)) or np.any(np.isinf(y)) or np.any(np.isnan(y)):
-            return
+    def test_get_gained_points_back(self):
+        x = np.linspace(0, 1, 100)
+        y = np.linspace(1, 2, 100)
+        gain = 10
 
         smooth_lines = smooth_plot(x, y, gain=gain)
 
