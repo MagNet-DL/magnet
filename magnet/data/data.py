@@ -14,7 +14,7 @@ def _get_data_dir():
 DIR_DATA = _get_data_dir()
 
 from . import core
-wiki = {'mnist': core.MNIST}
+wiki = {'mnist': core.MNIST, 'cifar10': core.CIFAR10, 'cifar100': core.CIFAR100}
 
 class Data:
     r"""A container which holds the Training, Validation
@@ -153,3 +153,4 @@ class Data:
             return wiki[name.lower()]()
         except KeyError as err:
             raise KeyError('No such dataset.') from err
+            
